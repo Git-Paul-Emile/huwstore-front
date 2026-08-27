@@ -24,7 +24,7 @@ export default function Settings() {
         <Card className="p-5">
           <h3 className="serif text-lg" style={{ color: "var(--adm-text)" }}>Informations boutique</h3>
           <div className="mt-4 space-y-3">
-            <label className="block text-sm"><span style={{ color: "var(--adm-muted)" }}>Nom</span><Input defaultValue="MW Store" className="mt-1.5" /></label>
+            <label className="block text-sm"><span style={{ color: "var(--adm-muted)" }}>Nom</span><Input defaultValue="HUWSTORE" className="mt-1.5" /></label>
             <label className="block text-sm"><span style={{ color: "var(--adm-muted)" }}>Téléphone / WhatsApp Business</span><Input defaultValue={SHOP_PHONE_DISPLAY} className="mt-1.5" /></label>
             <label className="block text-sm"><span style={{ color: "var(--adm-muted)" }}>Ville · Pays</span><Input defaultValue="Dakar · Sénégal" className="mt-1.5" /></label>
           </div>

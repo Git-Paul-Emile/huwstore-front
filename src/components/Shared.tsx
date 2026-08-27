@@ -29,9 +29,12 @@ export function ProductCard({ p }: { p: Product }) {
   const toggleWish = useCartStore((s) => s.toggleWish);
   const addToCart = useCartStore((s) => s.addToCart);
   const wished = wishlist.includes(p.id);
-  const soldOut = p.badge === "Rupture";
+  // Sur une carte produit on n'a pas de sélecteur de couleur : on ajoute la
+  // première déclinaison encore en stock, l'acheteur peut la changer ensuite.
+  const defaultVariant = p.variants?.find((v) => v.available) ?? p.variants?.[0];
+  const soldOut = p.badge === "Rupture" || !defaultVariant?.available;
   return (
-    <article className="group flex flex-col">
+    <article className="group flex h-full flex-col">
       <button
         onClick={() => navigate(`/produit/${p.id}`)}
         className="relative block overflow-hidden bg-cream-tint aspect-[4/5] text-left"
@@ -62,11 +65,11 @@ export function ProductCard({ p }: { p: Product }) {
           <Heart filled={wished} className={wished ? "text-gold" : ""} />
         </span>
       </button>
-      <div className="pt-4">
+      <div className="flex flex-1 flex-col pt-4">
         <p className="label-lux text-taupe">{p.collection}</p>
         <button
           onClick={() => navigate(`/produit/${p.id}`)}
-          className="serif mt-1 block text-lg text-ink transition-colors hover:text-gold-deep"
+          className="serif mt-1 line-clamp-2 min-h-[2.8rem] text-lg leading-tight text-ink transition-colors hover:text-gold-deep"
         >
           {p.name}
         </button>
@@ -75,7 +78,7 @@ export function ProductCard({ p }: { p: Product }) {
           {p.compareAt && <span className="text-xs text-taupe line-through">{fcfa(p.compareAt)}</span>}
         </div>
         <button
-          onClick={() => addToCart(p)}
+          onClick={() => defaultVariant && addToCart(p, defaultVariant)}
           disabled={soldOut}
           className="label-lux mt-3 flex w-full items-center justify-center gap-2 bg-gold py-3 text-ink transition-all hover:bg-gold-deep active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-taupe-soft disabled:text-taupe"
         >

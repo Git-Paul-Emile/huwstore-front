@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useCartStore, useCartTotals } from "../store/useCartStore";
 import { useDeliveryZones } from "../hooks/useDeliveryZones";
 import { fcfa, SHOP_PHONE_WA } from "../data";
-import { Close, Plus, Minus, Truck, ArrowRight } from "./icons";
+import { Close, Plus, Minus, Truck, ArrowRight, WhatsApp } from "./icons";
 
 export default function CartDrawer() {
   const cartOpen = useCartStore((s) => s.cartOpen);
@@ -27,8 +27,8 @@ export default function CartDrawer() {
   const progress = zone ? Math.min(100, (subtotal / zone.freeFrom) * 100) : 0;
   const total = subtotal - discount + shipping;
 
-  const orderLines = cart.map((l) => `• ${l.product.name} x${l.qty} — ${fcfa(l.product.price * l.qty)}`).join("%0A");
-  const waMessage = `Bonjour MW Store, je souhaite commander :%0A${orderLines}%0A%0ALivraison : ${delivery === "relay" ? "Point relais / boutique" : "Domicile"}${zone ? ` — ${zone.city} (${zone.country})` : ""}%0ATotal : ${fcfa(total)}`;
+  const orderLines = cart.map((l) => `• ${l.product.name} (${l.variant.color}) x${l.qty} - ${fcfa(l.product.price * l.qty)}`).join("%0A");
+  const waMessage = `Bonjour HUWSTORE, je souhaite commander :%0A${orderLines}%0A%0ALivraison : ${delivery === "relay" ? "Point relais / boutique" : "Domicile"}${zone ? ` - ${zone.city} (${zone.country})` : ""}%0ATotal : ${fcfa(total)}`;
   const waHref = `https://wa.me/${SHOP_PHONE_WA}?text=${waMessage}`;
 
   return (
@@ -63,24 +63,24 @@ export default function CartDrawer() {
 
             <div className="no-scrollbar flex-1 overflow-y-auto px-6">
               {cart.map((l) => (
-                <div key={l.product.id} className="flex gap-4 border-b border-taupe/15 py-5">
+                <div key={l.variant.id} className="flex gap-4 border-b border-taupe/15 py-5">
                   <div className="h-24 w-20 shrink-0 overflow-hidden bg-cream-tint">
-                    <img src={l.product.image} alt={l.product.imageAlt} className="h-full w-full object-cover" />
+                    <img src={l.variant.images[0]?.url ?? l.product.image} alt={l.variant.images[0]?.alt ?? l.product.imageAlt} className="h-full w-full object-cover" />
                   </div>
                   <div className="flex flex-1 flex-col">
                     <div className="flex justify-between gap-2">
                       <div>
                         <p className="label-lux text-taupe text-[0.58rem]">{l.product.collection}</p>
                         <p className="serif text-base leading-tight">{l.product.name}</p>
-                        <p className="text-xs text-taupe mt-0.5">{l.product.color} · {l.product.material}</p>
+                        <p className="text-xs text-taupe mt-0.5">{l.variant.color} · {l.product.material}</p>
                       </div>
-                      <button onClick={() => remove(l.product.id)} className="text-taupe text-lg self-start transition-colors hover:text-bordeaux"><Close /></button>
+                      <button onClick={() => remove(l.variant.id)} className="text-taupe text-lg self-start transition-colors hover:text-bordeaux"><Close /></button>
                     </div>
                     <div className="mt-auto flex items-center justify-between pt-2">
                       <div className="flex items-center border border-taupe/40">
-                        <button onClick={() => setQty(l.product.id, l.qty - 1)} className="grid h-8 w-8 place-items-center text-sm transition-colors hover:text-gold-deep"><Minus /></button>
+                        <button onClick={() => setQty(l.variant.id, l.qty - 1)} className="grid h-8 w-8 place-items-center text-sm transition-colors hover:text-gold-deep"><Minus /></button>
                         <span className="w-8 text-center text-sm tabular-nums">{l.qty}</span>
-                        <button onClick={() => setQty(l.product.id, l.qty + 1)} className="grid h-8 w-8 place-items-center text-sm transition-colors hover:text-gold-deep"><Plus /></button>
+                        <button onClick={() => setQty(l.variant.id, l.qty + 1)} className="grid h-8 w-8 place-items-center text-sm transition-colors hover:text-gold-deep"><Plus /></button>
                       </div>
                       <span className="text-sm tracking-wide">{fcfa(l.product.price * l.qty)}</span>
                     </div>
@@ -105,7 +105,7 @@ export default function CartDrawer() {
                     >
                       {zones.map((z) => (
                         <option key={`${z.city}|${z.country}`} value={`${z.city}|${z.country}`}>
-                          {z.city} — {z.country}
+                          {z.city} - {z.country}
                         </option>
                       ))}
                     </select>
@@ -122,7 +122,7 @@ export default function CartDrawer() {
                   className={`border px-3 py-2.5 text-left text-xs transition-colors ${delivery === "home" ? "border-gold bg-cream-tint" : "border-taupe/40 hover:border-gold"}`}
                 >
                   <span className="block font-medium text-ink">Livraison à domicile</span>
-                  <span className="text-taupe">{zone?.fee === 0 ? "Offerte" : zone ? fcfa(zone.fee) : "—"}</span>
+                  <span className="text-taupe">{zone?.fee === 0 ? "Offerte" : zone ? fcfa(zone.fee) : "-"}</span>
                 </button>
                 <button
                   onClick={() => zone?.relay && setDelivery("relay")}
@@ -149,7 +149,7 @@ export default function CartDrawer() {
                   Appliquer
                 </button>
               </div>
-              {applied && <p className="mt-2 text-xs text-bottle">Code BIENVENUE10 appliqué — 10% de réduction</p>}
+              {applied && <p className="mt-2 text-xs text-bottle">Code BIENVENUE10 appliqué - 10% de réduction</p>}
               {promo && !applied && <p className="mt-2 text-xs text-bordeaux">Essayez le code BIENVENUE10</p>}
 
               <dl className="mt-4 space-y-1.5 text-sm">
@@ -172,7 +172,7 @@ export default function CartDrawer() {
                 rel="noopener noreferrer"
                 className="mt-2 flex w-full items-center justify-center gap-2 border border-[#25D366] bg-[#25D366]/10 py-3.5 text-[#128C4B] transition-colors hover:bg-[#25D366]/20"
               >
-                <span className="text-lg">🟢</span>
+                <WhatsApp className="text-lg" />
                 <span className="label-lux">Commander via WhatsApp</span>
               </a>
               <p className="mt-3 flex items-center justify-center gap-1.5 text-[0.7rem] text-taupe">

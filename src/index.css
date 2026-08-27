@@ -41,7 +41,7 @@ body {
   color: var(--color-ink);
 }
 
-/* label style — petites capitales luxe */
+/* label style - petites capitales luxe */
 .label-lux {
   font-family: var(--font-sans);
   text-transform: uppercase;
@@ -78,7 +78,7 @@ body {
   animation: fadeUp 0.6s cubic-bezier(0.22, 0.61, 0.36, 1) both;
 }
 
-/* — Back-office : jetons de surface (clair par défaut, sombre optionnel) — */
+/* - Back-office : jetons de surface (clair par défaut, sombre optionnel) - */
 .adm {
   --adm-bg: #f4f1ec;
   --adm-surface: #ffffff;

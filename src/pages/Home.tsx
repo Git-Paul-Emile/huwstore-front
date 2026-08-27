@@ -18,6 +18,8 @@ export default function Home() {
   const [query, setQuery] = useState("");
   const { data: categories = [] } = useCategories();
   const { data: products = [] } = useProducts();
+  const newProducts = products.filter((p) => p.badge === "Nouveau").slice(0, 8);
+  const bestSellers = [...products].sort((a, b) => b.reviews - a.reviews).slice(0, 8);
 
   return (
     <div>
@@ -39,7 +41,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Barre de recherche — fond noir, pleine largeur */}
+      {/* Barre de recherche - fond noir, pleine largeur */}
       <section className="bg-ink text-cream">
         <div className="mx-auto max-w-[1400px] px-5 md:px-10 py-6 md:py-7">
           <form
@@ -64,8 +66,7 @@ export default function Home() {
       <section className="mx-auto max-w-[1400px] px-5 md:px-10 py-14 md:py-20">
         <div className="mb-8 flex items-end justify-between md:mb-10">
           <div>
-            <p className="label-lux text-gold-deep">Explorer</p>
-            <h2 className="serif mt-2 text-[1.75rem] leading-tight sm:text-3xl md:text-4xl">Nos univers</h2>
+            <h2 className="serif text-[1.75rem] leading-tight sm:text-3xl md:text-4xl">Nos univers</h2>
           </div>
           <button onClick={() => navigate("/boutique")} className="label-lux hidden items-center gap-2 text-anthracite hover:text-gold-deep sm:inline-flex">
             Tout voir <ArrowRight />
@@ -98,8 +99,7 @@ export default function Home() {
       <section className="bg-bordeaux text-cream">
         <div className="mx-auto grid max-w-[1400px] items-center gap-10 px-5 md:px-10 py-12 md:py-16 lg:grid-cols-2 lg:py-24">
           <div>
-            <p className="label-lux text-gold">Édition limitée</p>
-            <h2 className="serif mt-4 text-3xl leading-tight sm:text-4xl md:text-5xl">La ligne Nappa,<br /><span className="italic">jusqu'à −20%</span></h2>
+            <h2 className="serif text-3xl leading-tight sm:text-4xl md:text-5xl">La ligne Nappa,<br /><span className="italic">jusqu'à −20%</span></h2>
             <p className="mt-5 max-w-md text-sm leading-relaxed text-cream/75">
               Une sélection de nos cuirs les plus précieux, à prix atelier pendant quelques jours seulement.
             </p>
@@ -120,34 +120,47 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Nouveautés / grille */}
+      {/* Meilleures ventes */}
       <section className="mx-auto max-w-[1400px] px-5 md:px-10 py-14 md:py-20">
         <div className="mb-8 flex items-end justify-between gap-4 md:mb-10">
           <div>
-            <p className="label-lux text-gold-deep">Fraîchement arrivés</p>
-            <h2 className="serif mt-2 text-[1.6rem] leading-tight sm:text-3xl md:text-4xl">Nouveautés &amp; meilleures ventes</h2>
+            <h2 className="serif text-[1.6rem] leading-tight sm:text-3xl md:text-4xl">Meilleures ventes</h2>
           </div>
           <button onClick={() => navigate("/boutique")} className="label-lux hidden shrink-0 items-center gap-2 text-anthracite hover:text-gold-deep sm:inline-flex">
             Toute la boutique <ArrowRight />
           </button>
         </div>
         <div className="grid grid-cols-2 gap-x-3 gap-y-8 sm:gap-x-4 sm:gap-y-10 md:grid-cols-3 lg:grid-cols-4">
-          {products.slice(0, 12).map((p) => <ProductCard key={p.id} p={p} />)}
+          {bestSellers.map((p) => <ProductCard key={p.id} p={p} />)}
         </div>
       </section>
 
-      {/* Storytelling — bento savoir-faire */}
+      {/* Nouveautés */}
+      <section className="mx-auto max-w-[1400px] px-5 md:px-10 pb-14 md:pb-20">
+        <div className="mb-8 flex items-end justify-between gap-4 md:mb-10">
+          <div>
+            <h2 className="serif text-[1.6rem] leading-tight sm:text-3xl md:text-4xl">Nouveautés</h2>
+          </div>
+          <button onClick={() => navigate("/boutique")} className="label-lux hidden shrink-0 items-center gap-2 text-anthracite hover:text-gold-deep sm:inline-flex">
+            Toute la boutique <ArrowRight />
+          </button>
+        </div>
+        <div className="grid grid-cols-2 gap-x-3 gap-y-8 sm:gap-x-4 sm:gap-y-10 md:grid-cols-3 lg:grid-cols-4">
+          {newProducts.map((p) => <ProductCard key={p.id} p={p} />)}
+        </div>
+      </section>
+
+      {/* Storytelling - bento savoir-faire */}
       <section className="bg-cream-tint">
         <div className="mx-auto max-w-[1400px] px-5 md:px-10 py-14 md:py-20">
           <div className="grid gap-3.5 md:grid-cols-2 lg:grid-cols-3 lg:grid-rows-2 lg:h-[560px]">
             {/* Bloc titre */}
             <div className="flex flex-col justify-center lg:pr-4">
-              <p className="label-lux text-gold-deep">Notre savoir-faire</p>
-              <h2 className="serif mt-3 text-[1.75rem] leading-[1.12] sm:text-3xl md:text-4xl">
+              <h2 className="serif text-[1.75rem] leading-[1.12] sm:text-3xl md:text-4xl">
                 L'art de la maroquinerie, <span className="italic">à portée de main</span>
               </h2>
               <p className="mt-4 max-w-sm text-sm leading-relaxed text-anthracite">
-                Chaque pièce naît de la main d'un seul artisan — du choix de la peau au dernier point sellier. Des cuirs sélectionnés, pensés pour se transmettre.
+                Chaque pièce naît de la main d'un seul artisan - du choix de la peau au dernier point sellier. Des cuirs sélectionnés, pensés pour se transmettre.
               </p>
               <button
                 onClick={() => navigate("/boutique")}
@@ -178,7 +191,7 @@ export default function Home() {
               </div>
             </button>
 
-            {/* Grande carte — repère atelier */}
+            {/* Grande carte - repère atelier */}
             <button
               onClick={() => navigate("/boutique")}
               className="group relative overflow-hidden rounded-3xl bg-bottle text-left lg:row-span-2"
@@ -230,8 +243,7 @@ export default function Home() {
       {/* Newsletter */}
       <section className="bg-cream-tint">
         <div className="mx-auto max-w-2xl px-6 py-14 text-center md:py-20">
-          <p className="label-lux text-gold-deep">Le cercle Maïa</p>
-          <h2 className="serif mt-3 text-[1.6rem] leading-tight sm:text-3xl md:text-4xl">Recevez nos histoires en avant-première</h2>
+          <h2 className="serif text-[1.6rem] leading-tight sm:text-3xl md:text-4xl">Recevez nos histoires en avant-première</h2>
           <p className="mt-4 text-sm text-taupe">Ventes privées, nouveautés et conseils d'entretien. Sans jamais trop en faire.</p>
           <form onSubmit={(e) => e.preventDefault()} className="mx-auto mt-8 flex max-w-md flex-col gap-3 sm:flex-row">
             <input

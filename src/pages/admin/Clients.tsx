@@ -65,7 +65,7 @@ export default function Clients() {
                 <tr key={c.id} className="cursor-pointer hover:bg-[var(--adm-hover)]" onClick={() => setOpen(c)}>
                   <td className={td}><span className="font-medium" style={{ color: "var(--adm-text)" }}>{c.name}</span></td>
                   <td className={td} style={{ color: "var(--adm-muted)" }}>{c.phone}</td>
-                  <td className={td} style={{ color: "var(--adm-muted)" }}>{c.city ?? "—"}</td>
+                  <td className={td} style={{ color: "var(--adm-muted)" }}>{c.city ?? "-"}</td>
                   <td className={td} style={{ color: "var(--adm-text)" }}>{c.orders}</td>
                   <td className={td} style={{ color: "var(--adm-text)" }}>{fcfa(c.spent)}</td>
                   <td className={td}><Pill tone={segTone(c.segment)}>{c.segment}</Pill></td>
@@ -80,8 +80,8 @@ export default function Clients() {
         <Modal title={open.name} onClose={() => setOpen(null)} wide>
           <div className="grid gap-4 sm:grid-cols-2">
             <Info label="Téléphone / WhatsApp" value={open.phone} />
-            <Info label="Email" value={open.email ?? "—"} />
-            <Info label="Ville" value={open.city ?? "—"} />
+            <Info label="Email" value={open.email ?? "-"} />
+            <Info label="Ville" value={open.city ?? "-"} />
             <Info label="Client depuis" value={new Date(open.since).toLocaleDateString("fr-FR")} />
             <Info label="Commandes" value={String(open.orders)} />
             <Info label="Total dépensé" value={fcfa(open.spent)} />

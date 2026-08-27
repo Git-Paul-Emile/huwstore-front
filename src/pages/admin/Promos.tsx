@@ -36,7 +36,7 @@ export default function Promos() {
                 <tr key={p.id} className="hover:bg-[var(--adm-hover)]">
                   <td className={td}><span className="font-mono font-semibold tracking-wide" style={{ color: "var(--adm-text)" }}>{p.code}</span></td>
                   <td className={td} style={{ color: "var(--adm-text)" }}>{val(p)}</td>
-                  <td className={td} style={{ color: "var(--adm-muted)" }}>{p.minCart ? fcfa(p.minCart) : "—"}</td>
+                  <td className={td} style={{ color: "var(--adm-muted)" }}>{p.minCart ? fcfa(p.minCart) : "-"}</td>
                   <td className={td} style={{ color: "var(--adm-muted)" }}>
                     <div className="flex items-center gap-2">
                       <div className="h-1.5 w-20 overflow-hidden rounded-full" style={{ background: "var(--adm-hover)" }}>

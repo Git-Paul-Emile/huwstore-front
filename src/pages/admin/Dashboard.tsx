@@ -32,7 +32,7 @@ export default function Dashboard() {
 
   return (
     <div>
-      <PageHead title="Tableau de bord" sub="Vue d'ensemble du jour · MW Store #709666259" />
+      <PageHead title="Tableau de bord" sub="Vue d'ensemble du jour · HUWSTORE #709666259" />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Kpi label="CA aujourd'hui" value={fcfa(stats?.revenueToday ?? 0)} />
@@ -45,7 +45,7 @@ export default function Dashboard() {
         {/* Graphique ventes */}
         <Card className="p-5 lg:col-span-2">
           <div className="flex items-center justify-between">
-            <h3 className="serif text-lg" style={{ color: "var(--adm-text)" }}>Ventes — 7 derniers jours</h3>
+            <h3 className="serif text-lg" style={{ color: "var(--adm-text)" }}>Ventes - 7 derniers jours</h3>
             <span className="text-xs" style={{ color: "var(--adm-muted)" }}>en milliers de FCFA</span>
           </div>
           <div className="mt-6 flex h-48 items-end gap-3">
@@ -69,10 +69,10 @@ export default function Dashboard() {
           <h3 className="serif text-lg" style={{ color: "var(--adm-text)" }}>Alertes</h3>
           <ul className="mt-4 space-y-3">
             {lowStock.slice(0, 3).map((s) => (
-              <li key={s.productId} className="flex items-start gap-3 text-sm">
+              <li key={s.variantId} className="flex items-start gap-3 text-sm">
                 <span className="mt-0.5 text-rose-500"><Alert /></span>
                 <span style={{ color: "var(--adm-text)" }}>
-                  <b>{s.product}</b> — {s.qty === 0 ? "rupture de stock" : `stock faible (${s.qty})`}
+                  <b>{s.product}</b> - {s.qty === 0 ? "rupture de stock" : `stock faible (${s.qty})`}
                 </span>
               </li>
             ))}

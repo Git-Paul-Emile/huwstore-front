@@ -82,12 +82,12 @@ export default function AuthModal() {
               </button>
 
               <Divider />
-              <button onClick={() => toast("Connexion par code — bientôt disponible.")} className={ghostCls}>
+              <button onClick={() => toast("Connexion par code - bientôt disponible.")} className={ghostCls}>
                 <Phone className="text-base" /> Connexion par code SMS / WhatsApp
               </button>
               <div className="grid grid-cols-2 gap-3">
-                <button onClick={() => toast("Connexion Google — bientôt disponible.")} className={socialCls}>Google</button>
-                <button onClick={() => toast("Connexion Facebook — bientôt disponible.")} className={socialCls}>Facebook</button>
+                <button onClick={() => toast("Connexion Google - bientôt disponible.")} className={socialCls}>Google</button>
+                <button onClick={() => toast("Connexion Facebook - bientôt disponible.")} className={socialCls}>Facebook</button>
               </div>
 
               <p className="text-center text-sm text-taupe">
@@ -100,7 +100,7 @@ export default function AuthModal() {
           {/* ---- INSCRIPTION ---- */}
           {mode === "register" && (
             <div className="space-y-5">
-              <p className="text-sm text-taupe">Quelques infos suffisent — l'adresse vous sera demandée à la première commande.</p>
+              <p className="text-sm text-taupe">Quelques infos suffisent - l'adresse vous sera demandée à la première commande.</p>
               <Field label="Nom complet">
                 <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Awa Ndiaye" className={inputCls} />
               </Field>

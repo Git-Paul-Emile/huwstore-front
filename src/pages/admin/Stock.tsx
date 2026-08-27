@@ -12,7 +12,7 @@ export default function Stock() {
 
   const tone = (qty: number, threshold: number) => (qty === 0 ? "red" : qty <= threshold ? "amber" : "green");
   const critical = stock.filter((s) => s.qty <= s.threshold);
-  const adjustingRow = stock.find((s) => s.productId === adjust);
+  const adjustingRow = stock.find((s) => s.variantId === adjust);
 
   return (
     <div>
@@ -26,7 +26,7 @@ export default function Stock() {
         <Card className="mb-4 flex items-start gap-3 border-l-4 border-l-amber-500 p-4">
           <span className="mt-0.5 text-amber-500"><Alert /></span>
           <p className="text-sm" style={{ color: "var(--adm-text)" }}>
-            <b>Stock critique :</b> {critical.map((s) => s.product).join(", ")}. Notification envoyée au gestionnaire de stock.
+            <b>Stock critique :</b> {critical.map((s) => `${s.product} (${s.color})`).join(", ")}. Notification envoyée au gestionnaire de stock.
           </p>
         </Card>
       )}
@@ -37,6 +37,7 @@ export default function Stock() {
             <thead style={{ background: "var(--adm-surface-2)", color: "var(--adm-muted)" }}>
               <tr>
                 <th className={th}>Produit</th>
+                <th className={th}>Coloris</th>
                 <th className={th}>Stock</th>
                 <th className={th}>Seuil d'alerte</th>
                 <th className={th}>État</th>
@@ -45,15 +46,19 @@ export default function Stock() {
             </thead>
             <tbody className="divide-y" style={{ borderColor: "var(--adm-border)" }}>
               {stock.map((s) => (
-                <tr key={s.productId} className="hover:bg-[var(--adm-hover)]">
-                  <td className={td}><span className="font-medium" style={{ color: "var(--adm-text)" }}>{s.product}</span></td>
+                <tr key={s.variantId} className="hover:bg-[var(--adm-hover)]">
+                  <td className={td}>
+                    <span className="font-medium" style={{ color: "var(--adm-text)" }}>{s.product}</span>
+                    <span className="block text-xs" style={{ color: "var(--adm-muted)" }}>{s.sku}</span>
+                  </td>
+                  <td className={td} style={{ color: "var(--adm-muted)" }}>{s.color}</td>
                   <td className={`${td} tabular-nums`} style={{ color: "var(--adm-text)" }}>{s.qty}</td>
                   <td className={td} style={{ color: "var(--adm-muted)" }}>{s.threshold}</td>
                   <td className={td}>
                     <Pill tone={tone(s.qty, s.threshold)}>{s.qty === 0 ? "Rupture" : s.qty <= s.threshold ? "Faible" : "Suffisant"}</Pill>
                   </td>
                   <td className={`${td} text-right`}>
-                    <Btn variant="ghost" onClick={() => setAdjust(s.productId)}>Ajuster</Btn>
+                    <Btn variant="ghost" onClick={() => setAdjust(s.variantId)}>Ajuster</Btn>
                   </td>
                 </tr>
               ))}
@@ -98,7 +103,7 @@ export default function Stock() {
           onSave={(qty, reason) => {
             const delta = qty - adjustingRow.qty;
             adjustStock.mutate(
-              { productId: adjust, type: "Ajustement", qty: delta, reason, author: "Admin" },
+              { variantId: adjust, type: "Ajustement", qty: delta, reason, author: "Admin" },
               { onSuccess: () => toast("Stock ajusté") },
             );
             setAdjust(null);
@@ -113,7 +118,7 @@ function AdjustModal({ name, current, onClose, onSave }: { name: string; current
   const [qty, setQty] = useState(current);
   const [reason, setReason] = useState("");
   return (
-    <Modal title={`Ajuster le stock — ${name}`} onClose={onClose}>
+    <Modal title={`Ajuster le stock - ${name}`} onClose={onClose}>
       <label className="block text-sm">
         <span style={{ color: "var(--adm-muted)" }}>Nouvelle quantité en stock</span>
         <Input type="number" value={qty} onChange={(e) => setQty(Number(e.target.value))} className="mt-1.5" />

@@ -5,13 +5,11 @@ import { useAuthStore } from "../store/useAuthStore";
 import { useCategories } from "../hooks/useCategories";
 import { useDeliveryZones } from "../hooks/useDeliveryZones";
 import type { Category } from "../data";
-import { Search, User, Heart, Bag, Menu, Close, ChevronDown, Truck } from "./icons";
+import { Search, User, Heart, Bag, Menu, Close } from "./icons";
 import logoDark from "../assets/logo1.svg";
 
 const announcements = [
-  "Livraison offerte dès 75 000 FCFA — code BIENVENUE10 pour −10% sur la première commande",
-  "Paiement à la livraison · Wave · Orange Money · commande possible via WhatsApp",
-  "Retrait gratuit en boutique & points relais · Dakar · Abidjan · Douala · Cotonou",
+  "Livraison en moins de 24h à Dakar excepté les dimanches",
 ];
 
 const nav = ["Nouveautés", "Collections", "Sacs", "Petite Maroquinerie", "Contact"];
@@ -71,39 +69,6 @@ export default function Header() {
         </div>
       </div>
 
-      {/* Barre livraison — sélecteur de ville/pays visible */}
-      {zone && (
-        <div className="border-b border-taupe/25 bg-cream-tint">
-          <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-3 px-5 md:px-10 py-2">
-            <label className="flex items-center gap-2 text-anthracite">
-              <Truck className="text-base text-gold-deep" />
-              <span className="label-lux text-[0.6rem] text-taupe">Livraison vers</span>
-              <span className="relative">
-                <select
-                  value={`${zone.city}|${zone.country}`}
-                  onChange={(e) => {
-                    const z = zones.find((z) => `${z.city}|${z.country}` === e.target.value);
-                    if (z) setZone(z);
-                  }}
-                  className="label-lux appearance-none bg-transparent pr-5 text-[0.6rem] text-ink outline-none"
-                >
-                  {zones.map((z) => (
-                    <option key={`${z.city}|${z.country}`} value={`${z.city}|${z.country}`}>
-                      {z.city} — {z.country}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 text-xs text-gold-deep" />
-              </span>
-            </label>
-            <p className="hidden text-[0.7rem] text-taupe sm:block">
-              Délai {zone.delay} · {zone.fee === 0 ? "livraison offerte" : `à partir de ${zone.fee.toLocaleString("fr-FR")} FCFA`}
-              {zone.relay && <span className="text-gold-deep"> · retrait relais dispo.</span>}
-            </p>
-          </div>
-        </div>
-      )}
-
       <header
         className={`sticky top-0 z-40 transition-all duration-200 ${
           scrolled ? "bg-cream/95 shadow-[0_1px_0_rgba(184,175,163,0.35),0_8px_24px_-18px_rgba(15,15,15,0.4)] backdrop-blur" : "bg-cream"
@@ -129,8 +94,8 @@ export default function Header() {
           </button>
 
           {/* logo */}
-          <button onClick={() => navigate("/")} className="justify-self-center" aria-label="Accueil MW Store">
-            <img src={logoDark} alt="MW Store" className="h-10 w-auto md:h-12" />
+          <button onClick={() => navigate("/")} className="justify-self-center" aria-label="Accueil HUWSTORE">
+            <img src={logoDark} alt="HUWSTORE" className="h-10 w-auto md:h-12" />
           </button>
 
           {/* right nav + icons */}
@@ -224,7 +189,7 @@ export default function Header() {
           <div className="absolute inset-0 bg-ink/40" onClick={() => setMobile(false)} />
           <div className="absolute left-0 top-0 h-full w-[82%] max-w-sm bg-cream p-6 animate-slide-in">
             <div className="flex items-center justify-between">
-              <img src={logoDark} alt="MW Store" className="h-9 w-auto" />
+              <img src={logoDark} alt="HUWSTORE" className="h-9 w-auto" />
               <button onClick={() => setMobile(false)} className="text-2xl"><Close /></button>
             </div>
             <nav className="mt-8 flex flex-col">

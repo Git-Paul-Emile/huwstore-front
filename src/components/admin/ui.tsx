@@ -3,7 +3,7 @@ import { Check, Alert, Close } from "../icons";
 
 export const fcfa = (n: number) => `${n.toLocaleString("fr-FR")} FCFA`;
 
-// — Toasts —
+// - Toasts -
 type Toast = { id: number; msg: string; kind: "success" | "error" };
 type AdminUI = { toast: (msg: string, kind?: "success" | "error") => void };
 const UICtx = createContext<AdminUI | null>(null);
@@ -45,7 +45,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// — Primitives —
+// - Primitives -
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
     <div
@@ -139,7 +139,7 @@ export function Select(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
   );
 }
 
-// — Modale (confirmations, formulaires) —
+// - Modale (confirmations, formulaires) -
 export function Modal({
   title, children, onClose, wide,
 }: { title: string; children: ReactNode; onClose: () => void; wide?: boolean }) {

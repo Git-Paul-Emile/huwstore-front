@@ -53,7 +53,7 @@ export default function AdminLayout() {
             <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#c9a876] text-sm font-bold text-black">MW</span>
             {!collapsed && (
               <div className="leading-tight">
-                <p className="serif text-base">MW Store</p>
+                <p className="serif text-base">HUWSTORE</p>
                 <p className="text-[0.6rem] opacity-60">Back-office</p>
               </div>
             )}

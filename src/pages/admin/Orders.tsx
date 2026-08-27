@@ -72,7 +72,7 @@ export default function Orders() {
                   <td className={td} style={{ color: "var(--adm-text)" }}>{fcfa(o.total)}</td>
                   <td className={td}><Pill tone={payTone(o.pay)}>{o.pay}</Pill><br /><span className="mt-1 inline-block text-xs" style={{ color: "var(--adm-muted)" }}>{o.method}</span></td>
                   <td className={td}><Pill tone={statusTone(o.status)}>{o.status}</Pill></td>
-                  <td className={td} style={{ color: "var(--adm-muted)" }}>{o.courier ?? "—"}{o.tracking && <><br /><span className="text-xs">{o.tracking}</span></>}</td>
+                  <td className={td} style={{ color: "var(--adm-muted)" }}>{o.courier ?? "-"}{o.tracking && <><br /><span className="text-xs">{o.tracking}</span></>}</td>
                   <td className={`${td} text-right`}><Btn variant="ghost" onClick={() => setOpenId(o.id)}>Détail</Btn></td>
                 </tr>
               ))}
@@ -109,14 +109,14 @@ export default function Orders() {
             </div>
             <div className="rounded-lg border p-3" style={{ borderColor: "var(--adm-border)" }}>
               <p className="text-xs uppercase tracking-wider" style={{ color: "var(--adm-muted)" }}>Paiement</p>
-              <p className="mt-1 text-sm" style={{ color: "var(--adm-text)" }}>{open.method} — <Pill tone={payTone(open.pay)}>{open.pay}</Pill></p>
+              <p className="mt-1 text-sm" style={{ color: "var(--adm-text)" }}>{open.method} - <Pill tone={payTone(open.pay)}>{open.pay}</Pill></p>
             </div>
           </div>
 
           <div className="mt-4 rounded-lg border" style={{ borderColor: "var(--adm-border)" }}>
             {open.items.map((it, i) => (
               <div key={i} className="flex justify-between border-b px-4 py-2.5 text-sm last:border-0" style={{ borderColor: "var(--adm-border)" }}>
-                <span style={{ color: "var(--adm-text)" }}>{it.name} × {it.qty}</span>
+                <span style={{ color: "var(--adm-text)" }}>{it.name}{it.color ? ` — ${it.color}` : ""} × {it.qty}</span>
                 <span style={{ color: "var(--adm-muted)" }}>{fcfa(it.price * it.qty)}</span>
               </div>
             ))}
@@ -129,11 +129,11 @@ export default function Orders() {
             <label className="block text-sm">
               <span style={{ color: "var(--adm-muted)" }}>Transporteur / livreur</span>
               <Select
-                value={open.courier ?? "—"}
+                value={open.courier ?? "-"}
                 onChange={(e) => updateOrder.mutate({ id: open.id, input: { courier: e.target.value } })}
                 className="mt-1.5"
               >
-                <option>—</option><option>Livreur interne · Moussa</option><option>DHL Express</option><option>Prestataire · Chronopost</option>
+                <option>-</option><option>Livreur interne · Moussa</option><option>DHL Express</option><option>Prestataire · Chronopost</option>
               </Select>
             </label>
             <div className="flex items-end gap-2">

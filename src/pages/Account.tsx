@@ -275,7 +275,7 @@ function Addresses() {
   const [list, setList] = useState([
     { id: 1, label: "Domicile", detail: "Sacré-Cœur 3, villa 4521 · en face de la pharmacie", city: "Dakar", def: true },
     { id: 2, label: "Bureau", detail: "Plateau, avenue Pasteur, imm. Kébé, 2e étage", city: "Dakar", def: false },
-    { id: 3, label: "Point relais", detail: "Relais MW Store · Marché Sandaga", city: "Dakar", def: false },
+    { id: 3, label: "Point relais", detail: "Relais HUWSTORE · Marché Sandaga", city: "Dakar", def: false },
   ]);
   const setDefault = (id: number) => { setList((l) => l.map((a) => ({ ...a, def: a.id === id }))); toast("Adresse par défaut mise à jour"); };
   return (
@@ -395,7 +395,7 @@ function Support() {
       </div>
       <p className="label-lux mt-8 text-taupe">Historique des échanges</p>
       <div className="mt-3 rounded-xl border border-taupe/25 p-4 text-sm">
-        <div className="flex justify-between"><span className="font-medium">Ticket #4821 — Suivi livraison</span><span className="text-bottle">Résolu</span></div>
+        <div className="flex justify-between"><span className="font-medium">Ticket #4821 - Suivi livraison</span><span className="text-bottle">Résolu</span></div>
         <p className="mt-1 text-taupe">Ouvert le 20 août · dernière réponse il y a 2 jours</p>
       </div>
     </Panel>
@@ -414,7 +414,7 @@ function Faq({ q, a }: { q: string; a: string }) {
   );
 }
 
-// — petits helpers —
+// - petits helpers -
 function Btn({ children, onClick, ghost }: { children: React.ReactNode; onClick?: () => void; ghost?: boolean }) {
   return (
     <button

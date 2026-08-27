@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useCategories } from "../hooks/useCategories";
-import { useProducts } from "../hooks/useProducts";
-import { materials, colorFilters } from "../data";
+import { useProductFacets, useProducts } from "../hooks/useProducts";
+import { fcfa } from "../data";
 import { ProductCard } from "../components/Shared";
 import { ChevronDown, Close, Plus, Minus, Menu } from "../components/icons";
 
@@ -25,12 +25,20 @@ export default function Listing() {
   const navigate = useNavigate();
   const { category } = useParams<{ category?: string }>();
   const { data: categories = [] } = useCategories();
-  const { data: allProducts = [] } = useProducts();
+  const { data: allProducts = [] } = useProducts({ limit: 100 });
+  const { data: facets } = useProductFacets();
 
   const [cats, setCats] = useState<string[]>(category ? [category] : []);
   const [mats, setMats] = useState<string[]>([]);
   const [cols, setCols] = useState<string[]>([]);
-  const [maxPrice, setMaxPrice] = useState(800);
+  const priceBounds = useMemo(() => {
+    if (allProducts.length === 0) return { min: 0, max: 0 };
+    const prices = allProducts.map((p) => p.price);
+    return { min: Math.min(...prices), max: Math.max(...prices) };
+  }, [allProducts]);
+  // null = aucun plafond choisi : on affiche tout le catalogue.
+  const [maxPrice, setMaxPrice] = useState<number | null>(null);
+  const priceCap = maxPrice ?? priceBounds.max;
   const [sort, setSort] = useState<Sort>("featured");
   const [filtersOpen, setFiltersOpen] = useState(false);
 
@@ -48,14 +56,14 @@ export default function Listing() {
       (p) =>
         (cats.length === 0 || cats.includes(p.category)) &&
         (mats.length === 0 || mats.includes(p.material)) &&
-        (cols.length === 0 || cols.includes(p.color)) &&
-        p.price <= maxPrice,
+        (cols.length === 0 || p.variants.some((v) => cols.includes(v.color))) &&
+        p.price <= priceCap,
     );
     if (sort === "price-asc") r = [...r].sort((a, b) => a.price - b.price);
     if (sort === "price-desc") r = [...r].sort((a, b) => b.price - a.price);
     if (sort === "new") r = [...r].sort((a, b) => (b.badge === "Nouveau" ? 1 : 0) - (a.badge === "Nouveau" ? 1 : 0));
     return r;
-  }, [allProducts, cats, mats, cols, maxPrice, sort]);
+  }, [allProducts, cats, mats, cols, priceCap, sort]);
 
   const check = (label: string, arr: string[], set: (v: string[]) => void, count?: number) => (
     <label key={label} className="flex cursor-pointer items-center gap-2.5 text-sm text-anthracite">
@@ -76,19 +84,20 @@ export default function Listing() {
         {categories.map((c) => check(c.name, cats, setCats, c._count?.products))}
       </FilterGroup>
       <FilterGroup title="Matière">
-        {materials.map((m) => check(m, mats, setMats))}
+        {(facets?.materials ?? []).map((m) => check(m, mats, setMats))}
       </FilterGroup>
       <FilterGroup title="Couleur">
         <div className="flex flex-wrap gap-2">
-          {colorFilters.map((c) => (
+          {(facets?.colors ?? []).map((c) => (
             <button
-              key={c}
-              onClick={() => toggle(cols, setCols, c)}
-              className={`px-3 py-1.5 text-xs tracking-wide transition-colors ${
-                cols.includes(c) ? "bg-ink text-cream" : "border border-taupe/40 text-anthracite hover:border-gold"
+              key={c.slug}
+              onClick={() => toggle(cols, setCols, c.name)}
+              className={`flex items-center gap-2 px-3 py-1.5 text-xs tracking-wide transition-colors ${
+                cols.includes(c.name) ? "bg-ink text-cream" : "border border-taupe/40 text-anthracite hover:border-gold"
               }`}
             >
-              {c}
+              <span className="h-3 w-3 rounded-full border border-taupe/40" style={{ background: c.hex }} />
+              {c.name}
             </button>
           ))}
         </div>
@@ -97,16 +106,17 @@ export default function Listing() {
         <div className="pt-1">
           <input
             type="range"
-            min={200}
-            max={800}
-            step={10}
-            value={maxPrice}
+            min={priceBounds.min}
+            max={priceBounds.max}
+            step={500}
+            value={priceCap}
+            disabled={priceBounds.max === priceBounds.min}
             onChange={(e) => setMaxPrice(Number(e.target.value))}
             className="w-full accent-gold"
           />
           <div className="mt-2 flex justify-between text-xs text-taupe">
-            <span>200 €</span>
-            <span className="text-ink">Jusqu'à {maxPrice} €</span>
+            <span>{fcfa(priceBounds.min)}</span>
+            <span className="text-ink">Jusqu'à {fcfa(priceCap)}</span>
           </div>
         </div>
       </FilterGroup>
@@ -172,7 +182,7 @@ export default function Listing() {
                 </button>
               ))}
               <button
-                onClick={() => { setCats([]); setMats([]); setCols([]); setMaxPrice(800); }}
+                onClick={() => { setCats([]); setMats([]); setCols([]); setMaxPrice(null); }}
                 className="label-lux ml-1 text-taupe underline underline-offset-2 hover:text-bordeaux"
               >
                 Tout effacer
@@ -221,7 +231,7 @@ export default function Listing() {
             <div className="no-scrollbar flex-1 overflow-y-auto px-6">{sidebar}</div>
             <div className="grid grid-cols-2 gap-3 border-t border-taupe/25 px-6 py-4">
               <button
-                onClick={() => { setCats([]); setMats([]); setCols([]); setMaxPrice(800); }}
+                onClick={() => { setCats([]); setMats([]); setCols([]); setMaxPrice(null); }}
                 className="label-lux border border-ink py-3 text-ink transition-colors hover:bg-cream-tint"
               >
                 Effacer

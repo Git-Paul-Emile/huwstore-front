@@ -3,12 +3,12 @@ import { Card, PageHead, Pill, Btn, Input, Select, Modal, ConfirmModal, useUI, f
 import { useCategories } from "../../hooks/useCategories";
 import { useCreateProduct, useDeleteProduct, useProducts, useUpdateProduct } from "../../hooks/useProducts";
 import type { Product } from "../../data";
-import type { ProductInput } from "../../api/products";
+import type { ProductInput, ProductUpdateInput, VariantInput } from "../../api/products";
 import { Plus, Edit, Copy, Archive, Search, Filter } from "../../components/icons";
 
 export default function Products() {
   const { toast } = useUI();
-  const { data: products = [] } = useProducts({ all: true });
+  const { data: products = [] } = useProducts({ all: true, limit: 100 });
   const { data: categories = [] } = useCategories();
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
@@ -58,19 +58,36 @@ export default function Products() {
     if (!categoryId) return;
     createProduct.mutate(
       {
-        name: p.name + " (copie)",
+        name: `${p.name} (copie)`,
         collection: p.collection,
         categoryId,
         material: p.material,
-        color: p.color,
+        description: p.description,
+        care: p.care,
         price: p.price,
         compareAt: p.compareAt,
-        image: p.image,
-        imageAlt: p.imageAlt,
-        imageHover: p.imageHover,
-        active: true,
+        closure: p.specs.closure,
+        capacity: p.specs.capacity,
+        widthTopMm: p.specs.widthTopMm,
+        widthBottomMm: p.specs.widthBottomMm,
+        heightMm: p.specs.heightMm,
+        depthMm: p.specs.depthMm,
+        handleDropMm: p.specs.handleDropMm,
+        weightGrams: p.specs.weightGrams,
+        features: p.specs.features,
+        active: false,
+        // Le SKU est omis : le back en génère un nouveau, unique par produit.
+        variants: p.variants.map((v) => ({
+          color: v.color,
+          colorSlug: v.colorSlug,
+          hex: v.hex,
+          hexSecondary: v.hexSecondary,
+          images: v.images.map((i) => i.url),
+          stockQty: 0,
+          stockThreshold: v.stock.threshold,
+        })),
       },
-      { onSuccess: () => toast("Produit dupliqué") },
+      { onSuccess: () => toast("Produit dupliqué (inactif, stock à zéro)") },
     );
   };
 
@@ -141,7 +158,12 @@ export default function Products() {
                   </td>
                   <td className={td} style={{ color: "var(--adm-muted)" }}>{p.category}</td>
                   <td className={td} style={{ color: "var(--adm-text)" }}>{fcfa(p.price)}</td>
-                  <td className={td} style={{ color: "var(--adm-text)" }}>{p.stock?.qty ?? "—"}</td>
+                  <td className={td} style={{ color: "var(--adm-text)" }}>
+                    {p.stock?.qty ?? "-"}
+                    <span className="block text-xs" style={{ color: "var(--adm-muted)" }}>
+                      {p.variants.length} coloris
+                    </span>
+                  </td>
                   <td className={td}>
                     <Pill tone={statusOf(p) === "Actif" ? "green" : statusOf(p) === "Rupture" ? "red" : "gray"}>{statusOf(p)}</Pill>
                   </td>
@@ -165,12 +187,13 @@ export default function Products() {
           product={editing === "new" ? null : editing}
           categories={categories}
           onClose={() => setEditing(null)}
-          onSave={(input) => {
-            if (editing === "new") {
-              createProduct.mutate(input, { onSuccess: () => toast("Produit créé") });
-            } else {
-              updateProduct.mutate({ id: editing.id, input }, { onSuccess: () => toast("Produit enregistré") });
-            }
+          onCreate={(input) => {
+            createProduct.mutate(input, { onSuccess: () => toast("Produit créé") });
+            setEditing(null);
+          }}
+          onUpdate={(input) => {
+            if (editing === "new") return;
+            updateProduct.mutate({ id: editing.id, input }, { onSuccess: () => toast("Produit enregistré") });
             setEditing(null);
           }}
         />
@@ -192,82 +215,371 @@ export default function Products() {
   );
 }
 
+/** Slug d'URL : minuscules, sans accent, sans caractère spécial. */
+const slugify = (value: string) =>
+  value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .replace(/&/g, "-et-")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+
+/** Les dimensions sont saisies en centimètres et stockées en millimètres. */
+const toMm = (cmValue: string) => {
+  const parsed = Number(cmValue.replace(",", "."));
+  return Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed * 10) : undefined;
+};
+const toCm = (mm?: number) => (mm === undefined ? "" : String(mm / 10));
+
+const emptyVariant = (): VariantInput => ({ color: "", colorSlug: "", hex: "#1a1a1a", images: [], stockQty: 0, stockThreshold: 3 });
+
+const DIMENSION_FIELDS = [
+  { key: "widthTopMm", label: "Largeur en haut (cm)" },
+  { key: "widthBottomMm", label: "Largeur en bas (cm)" },
+  { key: "heightMm", label: "Hauteur (cm)" },
+  { key: "depthMm", label: "Profondeur (cm)" },
+  { key: "handleDropMm", label: "Hauteur des anses (cm)" },
+] as const;
+
+type DimensionKey = (typeof DIMENSION_FIELDS)[number]["key"];
+
 function ProductForm({
-  product, categories, onClose, onSave,
+  product,
+  categories,
+  onClose,
+  onCreate,
+  onUpdate,
 }: {
   product: Product | null;
   categories: { id: string; name: string }[];
   onClose: () => void;
-  onSave: (input: ProductInput) => void;
+  onCreate: (input: ProductInput) => void;
+  onUpdate: (input: ProductUpdateInput) => void;
 }) {
+  const isEdit = product !== null;
+
   const [name, setName] = useState(product?.name ?? "");
-  const [categoryId, setCategoryId] = useState(categories.find((c) => c.name === product?.category)?.id ?? categories[0]?.id ?? "");
-  const [price, setPrice] = useState(product?.price ?? 0);
-  const [compareAt, setCompareAt] = useState(product?.compareAt ?? 0);
+  const [collection, setCollection] = useState(product?.collection ?? "HUWSTORE");
+  const [categoryId, setCategoryId] = useState(
+    categories.find((c) => c.name === product?.category)?.id ?? categories[0]?.id ?? "",
+  );
   const [material, setMaterial] = useState(product?.material ?? "");
-  const [color, setColor] = useState(product?.color ?? "");
+  const [price, setPrice] = useState(String(product?.price ?? ""));
+  const [compareAt, setCompareAt] = useState(String(product?.compareAt ?? ""));
+  const [description, setDescription] = useState(product?.description ?? "");
+  const [care, setCare] = useState(product?.care ?? "");
+  const [closure, setClosure] = useState(product?.specs.closure ?? "");
+  const [capacity, setCapacity] = useState(product?.specs.capacity ?? "");
+  const [weight, setWeight] = useState(String(product?.specs.weightGrams ?? ""));
+  const [features, setFeatures] = useState((product?.specs.features ?? []).join("\n"));
+  const [dimensions, setDimensions] = useState<Record<DimensionKey, string>>(() =>
+    Object.fromEntries(DIMENSION_FIELDS.map((f) => [f.key, toCm(product?.specs[f.key])])) as Record<DimensionKey, string>,
+  );
+
+  // Les déclinaisons ne se saisissent qu'à la création : les modifier ensuite
+  // toucherait au stock et aux commandes, ce qui passe par l'écran Stock.
+  const [variants, setVariants] = useState<VariantInput[]>([emptyVariant()]);
+
+  const setVariant = (index: number, patch: Partial<VariantInput>) =>
+    setVariants((list) => list.map((v, i) => (i === index ? { ...v, ...patch } : v)));
+
+  const priceNumber = Number(price);
+  const compareNumber = Number(compareAt);
+
+  const variantsValid =
+    isEdit ||
+    (variants.length > 0 &&
+      variants.every((v) => v.color.trim() !== "" && /^#[0-9a-fA-F]{6}$/.test(v.hex)) &&
+      new Set(variants.map((v) => slugify(v.color))).size === variants.length);
+
+  const valid =
+    name.trim() !== "" &&
+    categoryId !== "" &&
+    material.trim() !== "" &&
+    description.trim() !== "" &&
+    care.trim() !== "" &&
+    Number.isInteger(priceNumber) &&
+    priceNumber > 0 &&
+    (compareAt === "" || compareNumber > priceNumber) &&
+    variantsValid;
+
+  /** Champs communs à la création et à la mise à jour. */
+  const commonFields = () => ({
+    name: name.trim(),
+    collection: collection.trim(),
+    categoryId,
+    material: material.trim(),
+    description: description.trim(),
+    care: care.trim(),
+    price: priceNumber,
+    compareAt: compareAt === "" ? undefined : compareNumber,
+    closure: closure.trim() || undefined,
+    capacity: capacity.trim() || undefined,
+    weightGrams: weight === "" ? undefined : Number(weight),
+    features: features
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean),
+    ...(Object.fromEntries(DIMENSION_FIELDS.map((f) => [f.key, toMm(dimensions[f.key])])) as Record<DimensionKey, number | undefined>),
+  });
 
   const submit = () => {
-    onSave({
-      name,
-      collection: "Maison Aurélie",
-      categoryId,
-      material,
-      color,
-      price: Number(price),
-      compareAt: compareAt ? Number(compareAt) : undefined,
-      image: product?.image ?? "",
-      imageAlt: name,
-      imageHover: product?.imageHover ?? "",
+    if (!valid) return;
+    if (isEdit) {
+      onUpdate(commonFields());
+      return;
+    }
+    onCreate({
+      ...commonFields(),
       active: true,
+      variants: variants.map((v) => ({
+        color: v.color.trim(),
+        colorSlug: slugify(v.color),
+        hex: v.hex,
+        hexSecondary: v.hexSecondary || undefined,
+        images: v.images,
+        stockQty: Number(v.stockQty ?? 0),
+        stockThreshold: Number(v.stockThreshold ?? 3),
+      })),
     });
   };
 
+  const labelStyle = { color: "var(--adm-muted)" } as const;
+  const sectionTitle = "mb-1.5 mt-2 text-xs font-medium uppercase tracking-wider md:col-span-2";
+
   return (
-    <Modal title={product ? "Éditer le produit" : "Nouveau produit"} onClose={onClose} wide>
+    <Modal title={isEdit ? "Éditer le produit" : "Nouveau produit"} onClose={onClose} wide>
       <div className="grid gap-4 md:grid-cols-2">
-        <div className="md:col-span-2">
-          <p className="mb-1.5 text-xs font-medium uppercase tracking-wider" style={{ color: "var(--adm-muted)" }}>Infos générales</p>
-        </div>
-        <label className="md:col-span-2 block text-sm">
-          <span style={{ color: "var(--adm-muted)" }}>Nom</span>
-          <Input value={name} onChange={(e) => setName(e.target.value)} className="mt-1.5" placeholder="Nom du produit" />
+        <p className={sectionTitle} style={labelStyle}>Informations générales</p>
+
+        <label className="block text-sm md:col-span-2">
+          <span style={labelStyle}>Nom</span>
+          <Input value={name} onChange={(e) => setName(e.target.value)} className="mt-1.5" placeholder="Tote bag en toile de coton" />
         </label>
+
         <label className="block text-sm">
-          <span style={{ color: "var(--adm-muted)" }}>Catégorie</span>
+          <span style={labelStyle}>Collection</span>
+          <Input value={collection} onChange={(e) => setCollection(e.target.value)} className="mt-1.5" />
+        </label>
+
+        <label className="block text-sm">
+          <span style={labelStyle}>Catégorie</span>
           <Select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className="mt-1.5">
-            {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
           </Select>
         </label>
-        <label className="block text-sm">
-          <span style={{ color: "var(--adm-muted)" }}>Matière</span>
-          <Input value={material} onChange={(e) => setMaterial(e.target.value)} className="mt-1.5" />
-        </label>
-        <label className="block text-sm">
-          <span style={{ color: "var(--adm-muted)" }}>Couleur</span>
-          <Input value={color} onChange={(e) => setColor(e.target.value)} className="mt-1.5" />
+
+        <label className="block text-sm md:col-span-2">
+          <span style={labelStyle}>Matière</span>
+          <Input value={material} onChange={(e) => setMaterial(e.target.value)} className="mt-1.5" placeholder="Toile de coton" />
         </label>
 
-        <div className="md:col-span-2 mt-2">
-          <p className="mb-1.5 text-xs font-medium uppercase tracking-wider" style={{ color: "var(--adm-muted)" }}>Prix</p>
-        </div>
-        <label className="block text-sm">
-          <span style={{ color: "var(--adm-muted)" }}>Prix (FCFA)</span>
-          <Input type="number" value={price} onChange={(e) => setPrice(Number(e.target.value))} className="mt-1.5" />
-        </label>
-        <label className="block text-sm">
-          <span style={{ color: "var(--adm-muted)" }}>Prix promo (FCFA)</span>
-          <Input type="number" value={compareAt} onChange={(e) => setCompareAt(Number(e.target.value))} className="mt-1.5" placeholder="0 = aucun" />
+        <label className="block text-sm md:col-span-2">
+          <span style={labelStyle}>Description</span>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={4}
+            className="mt-1.5 w-full rounded-lg border px-3 py-2 text-sm outline-none"
+            style={{ borderColor: "var(--adm-border)", background: "var(--adm-surface)", color: "var(--adm-text)" }}
+          />
         </label>
 
-        <div className="md:col-span-2 rounded-lg border border-dashed p-6 text-center text-sm" style={{ borderColor: "var(--adm-border)", color: "var(--adm-muted)" }}>
-          Glissez-déposez vos images ici · réordonnancement et image principale (démo)
-        </div>
+        <label className="block text-sm md:col-span-2">
+          <span style={labelStyle}>Conseils d'entretien</span>
+          <textarea
+            value={care}
+            onChange={(e) => setCare(e.target.value)}
+            rows={3}
+            className="mt-1.5 w-full rounded-lg border px-3 py-2 text-sm outline-none"
+            style={{ borderColor: "var(--adm-border)", background: "var(--adm-surface)", color: "var(--adm-text)" }}
+          />
+        </label>
+
+        <p className={sectionTitle} style={labelStyle}>Prix</p>
+        <label className="block text-sm">
+          <span style={labelStyle}>Prix (FCFA)</span>
+          <Input type="number" min={0} value={price} onChange={(e) => setPrice(e.target.value)} className="mt-1.5" />
+        </label>
+        <label className="block text-sm">
+          <span style={labelStyle}>Prix barré (FCFA)</span>
+          <Input
+            type="number"
+            min={0}
+            value={compareAt}
+            onChange={(e) => setCompareAt(e.target.value)}
+            className="mt-1.5"
+            placeholder="vide = aucune promotion"
+          />
+        </label>
+        {compareAt !== "" && compareNumber <= priceNumber && (
+          <p className="text-xs text-rose-500 md:col-span-2">Le prix barré doit être supérieur au prix de vente.</p>
+        )}
+
+        <p className={sectionTitle} style={labelStyle}>Caractéristiques</p>
+        <label className="block text-sm">
+          <span style={labelStyle}>Fermeture</span>
+          <Input value={closure} onChange={(e) => setClosure(e.target.value)} className="mt-1.5" placeholder="Zippée" />
+        </label>
+        <label className="block text-sm">
+          <span style={labelStyle}>Poids (g)</span>
+          <Input type="number" min={0} value={weight} onChange={(e) => setWeight(e.target.value)} className="mt-1.5" />
+        </label>
+        <label className="block text-sm md:col-span-2">
+          <span style={labelStyle}>Capacité</span>
+          <Input value={capacity} onChange={(e) => setCapacity(e.target.value)} className="mt-1.5" placeholder="Peut contenir un ordinateur" />
+        </label>
+
+        {DIMENSION_FIELDS.map((field) => (
+          <label key={field.key} className="block text-sm">
+            <span style={labelStyle}>{field.label}</span>
+            <Input
+              type="number"
+              min={0}
+              step="0.1"
+              value={dimensions[field.key]}
+              onChange={(e) => setDimensions((d) => ({ ...d, [field.key]: e.target.value }))}
+              className="mt-1.5"
+            />
+          </label>
+        ))}
+
+        <label className="block text-sm md:col-span-2">
+          <span style={labelStyle}>Points forts — une ligne par élément</span>
+          <textarea
+            value={features}
+            onChange={(e) => setFeatures(e.target.value)}
+            rows={4}
+            className="mt-1.5 w-full rounded-lg border px-3 py-2 text-sm outline-none"
+            style={{ borderColor: "var(--adm-border)", background: "var(--adm-surface)", color: "var(--adm-text)" }}
+            placeholder={"Fermeture zippée\nCompartiment pour ordinateur"}
+          />
+        </label>
+
+        <p className={sectionTitle} style={labelStyle}>Coloris</p>
+
+        {product ? (
+          <div className="md:col-span-2">
+            <div className="flex flex-wrap gap-2">
+              {product.variants.map((v) => (
+                <span
+                  key={v.id}
+                  className="inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm"
+                  style={{ borderColor: "var(--adm-border)", color: "var(--adm-text)" }}
+                >
+                  <span
+                    className="h-3.5 w-3.5 rounded-full border"
+                    style={{
+                      borderColor: "var(--adm-border)",
+                      background: v.hexSecondary ? `linear-gradient(135deg, ${v.hex} 50%, ${v.hexSecondary} 50%)` : v.hex,
+                    }}
+                  />
+                  {v.color} · {v.stock.qty} en stock
+                </span>
+              ))}
+            </div>
+            <p className="mt-2 text-xs" style={labelStyle}>
+              Les quantités se modifient depuis l'écran Stock, pour que chaque changement laisse un mouvement traçable.
+            </p>
+          </div>
+        ) : (
+          <div className="md:col-span-2 space-y-3">
+            {variants.map((variant, index) => (
+              <div
+                key={index}
+                className="grid gap-3 rounded-lg border p-3 md:grid-cols-[1fr_auto_auto_auto_auto]"
+                style={{ borderColor: "var(--adm-border)" }}
+              >
+                <label className="block text-sm">
+                  <span style={labelStyle}>Nom du coloris</span>
+                  <Input
+                    value={variant.color}
+                    onChange={(e) => setVariant(index, { color: e.target.value })}
+                    className="mt-1.5"
+                    placeholder="Noir"
+                  />
+                  {variant.color && (
+                    <span className="mt-1 block text-xs" style={labelStyle}>slug : {slugify(variant.color)}</span>
+                  )}
+                </label>
+                <label className="block text-sm">
+                  <span style={labelStyle}>Teinte</span>
+                  <input
+                    type="color"
+                    value={variant.hex}
+                    onChange={(e) => setVariant(index, { hex: e.target.value })}
+                    className="mt-1.5 h-9 w-14 cursor-pointer rounded border"
+                    style={{ borderColor: "var(--adm-border)" }}
+                  />
+                </label>
+                <label className="block text-sm">
+                  <span style={labelStyle}>2ᵉ teinte</span>
+                  <input
+                    type="color"
+                    value={variant.hexSecondary ?? "#ffffff"}
+                    onChange={(e) => setVariant(index, { hexSecondary: e.target.value })}
+                    className="mt-1.5 h-9 w-14 cursor-pointer rounded border"
+                    style={{ borderColor: "var(--adm-border)" }}
+                  />
+                </label>
+                <label className="block text-sm">
+                  <span style={labelStyle}>Stock</span>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={String(variant.stockQty ?? 0)}
+                    onChange={(e) => setVariant(index, { stockQty: Number(e.target.value) })}
+                    className="mt-1.5 w-24"
+                  />
+                </label>
+                <label className="block text-sm">
+                  <span style={labelStyle}>Seuil</span>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={String(variant.stockThreshold ?? 3)}
+                    onChange={(e) => setVariant(index, { stockThreshold: Number(e.target.value) })}
+                    className="mt-1.5 w-24"
+                  />
+                </label>
+                <label className="block text-sm md:col-span-5">
+                  <span style={labelStyle}>Images — une URL par ligne</span>
+                  <textarea
+                    value={variant.images.join("\n")}
+                    onChange={(e) => setVariant(index, { images: e.target.value.split("\n").map((l) => l.trim()).filter(Boolean) })}
+                    rows={2}
+                    className="mt-1.5 w-full rounded-lg border px-3 py-2 text-sm outline-none"
+                    style={{ borderColor: "var(--adm-border)", background: "var(--adm-surface)", color: "var(--adm-text)" }}
+                    placeholder="/products/mon-produit/noir-1.jpg"
+                  />
+                </label>
+                {variants.length > 1 && (
+                  <div className="md:col-span-5">
+                    <Btn variant="ghost" onClick={() => setVariants((list) => list.filter((_, i) => i !== index))}>
+                      Retirer ce coloris
+                    </Btn>
+                  </div>
+                )}
+              </div>
+            ))}
+            <Btn variant="ghost" onClick={() => setVariants((list) => [...list, emptyVariant()])}>
+              <Plus /> Ajouter un coloris
+            </Btn>
+            {!variantsValid && (
+              <p className="text-xs text-rose-500">
+                Chaque coloris doit avoir un nom unique et une teinte valide.
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="mt-6 flex justify-end gap-3">
         <Btn variant="ghost" onClick={onClose}>Annuler</Btn>
-        <Btn onClick={submit} disabled={!name || !categoryId}>{product ? "Enregistrer" : "Créer le produit"}</Btn>
+        <Btn onClick={submit} disabled={!valid}>{isEdit ? "Enregistrer" : "Créer le produit"}</Btn>
       </div>
     </Modal>
   );

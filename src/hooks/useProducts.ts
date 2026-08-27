@@ -1,10 +1,41 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createProduct, deleteProduct, getProduct, getProducts, updateProduct, type ProductFilters, type ProductInput } from "../api/products";
+import {
+  createProduct,
+  deleteProduct,
+  getProduct,
+  getProductFacets,
+  getProducts,
+  updateProduct,
+  type ProductFilters,
+  type ProductInput,
+  type ProductUpdateInput,
+} from "../api/products";
+import type { Product } from "../data";
 
-export const useProducts = (filters: ProductFilters = {}) =>
+const EMPTY: Product[] = [];
+
+/** Page de produits + métadonnées de pagination. */
+export const useProductPage = (filters: ProductFilters = {}) =>
   useQuery({ queryKey: ["products", filters], queryFn: () => getProducts(filters) });
 
-export const useProduct = (id: string) => useQuery({ queryKey: ["products", id], queryFn: () => getProduct(id), enabled: !!id });
+/**
+ * Raccourci quand seule la liste compte (cartes, suggestions).
+ * `select` évite de recréer un tableau à chaque rendu : React Query mémorise
+ * le résultat tant que la donnée n'a pas changé.
+ */
+export const useProducts = (filters: ProductFilters = {}) =>
+  useQuery({
+    queryKey: ["products", filters],
+    queryFn: () => getProducts(filters),
+    select: (page) => page.items ?? EMPTY,
+  });
+
+export const useProduct = (idOrSlug: string) =>
+  useQuery({ queryKey: ["products", "detail", idOrSlug], queryFn: () => getProduct(idOrSlug), enabled: !!idOrSlug });
+
+/** Matières et couleurs réellement présentes au catalogue. */
+export const useProductFacets = () =>
+  useQuery({ queryKey: ["products", "facets"], queryFn: getProductFacets, staleTime: 5 * 60 * 1000 });
 
 export function useCreateProduct() {
   const queryClient = useQueryClient();
@@ -17,7 +48,7 @@ export function useCreateProduct() {
 export function useUpdateProduct() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, input }: { id: string; input: Partial<ProductInput> }) => updateProduct(id, input),
+    mutationFn: ({ id, input }: { id: string; input: ProductUpdateInput }) => updateProduct(id, input),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["products"] }),
   });
 }

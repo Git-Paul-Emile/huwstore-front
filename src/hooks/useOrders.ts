@@ -1,7 +1,24 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createOrder, getMyOrders, getOrders, updateOrder, type OrderInput, type OrderUpdateInput } from "../api/orders";
+import {
+  createOrder,
+  getMyOrders,
+  getOrders,
+  updateOrder,
+  type OrderFilters,
+  type OrderInput,
+  type OrderUpdateInput,
+} from "../api/orders";
+import type { Order } from "../api/orders";
 
-export const useOrders = () => useQuery({ queryKey: ["orders"], queryFn: getOrders });
+const EMPTY: Order[] = [];
+
+/** Page de commandes + métadonnées de pagination. */
+export const useOrderPage = (filters: OrderFilters = {}) =>
+  useQuery({ queryKey: ["orders", filters], queryFn: () => getOrders(filters) });
+
+/** Raccourci liste seule, pour les écrans qui n'affichent pas de pagination. */
+export const useOrders = (filters: OrderFilters = {}) =>
+  useQuery({ queryKey: ["orders", filters], queryFn: () => getOrders(filters), select: (page) => page.items ?? EMPTY });
 
 export const useMyOrders = () => useQuery({ queryKey: ["orders", "mine"], queryFn: getMyOrders });
 
@@ -9,7 +26,12 @@ export function useCreateOrder() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: OrderInput) => createOrder(input),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["orders"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      // Une vente décrémente le stock : les produits et le stock sont périmés.
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["stock"] });
+    },
   });
 }
 

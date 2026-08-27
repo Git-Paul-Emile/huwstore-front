@@ -5,27 +5,26 @@ import { ArrowRight, ChevronDown } from "./icons";
 type Slide = {
   img: string;
   alt: string;
-  eyebrow: string;
   title: React.ReactNode;
   text: string;
   cta: string;
+  position?: string;
 };
 
-const img = (id: string) => `https://images.unsplash.com/photo-${id}?w=1600&h=1100&fit=crop&auto=format`;
+const img = (id: string) => `https://images.unsplash.com/photo-${id}?w=2400&auto=format&fit=max&q=80`;
 
 const slides: Slide[] = [
   {
     img: img("1560891958-68bb1fe7fb78"),
     alt: "Femme tenant un sac en cuir bleu",
-    eyebrow: "Collection Automne 2026",
     title: <>L'élégance<br /><span className="italic">se façonne à la main</span></>,
-    text: "Des sacs intemporels nés dans nos ateliers parisiens, où chaque couture raconte un savoir-faire.",
+    text: "Alliez style et praticité au quotidien.",
     cta: "Découvrir la collection",
+    position: "object-top",
   },
   {
     img: img("1637759292654-a12cb2be085e"),
     alt: "Sac à main en cuir fauve avec longue bandoulière",
-    eyebrow: "Édition limitée · Ligne Nappa",
     title: <>Le cuir nappa,<br /><span className="italic">jusqu'à −20%</span></>,
     text: "Une sélection de nos peaux les plus précieuses, à prix atelier pendant quelques jours seulement.",
     cta: "Profiter de l'offre",
@@ -33,7 +32,6 @@ const slides: Slide[] = [
   {
     img: img("1683921470299-b8f0f3331657"),
     alt: "Main tenant un sac en cuir gris",
-    eyebrow: "Maison Aurélie",
     title: <>Le geste juste,<br /><span className="italic">transmis depuis 1987</span></>,
     text: "Chaque pièce naît de la main d'un seul artisan, du choix de la peau au dernier point sellier.",
     cta: "Découvrir la maison",
@@ -72,14 +70,13 @@ export default function HeroSlider() {
             <img
               src={s.img}
               alt={s.alt}
-              className={`h-full w-full object-cover object-center transition-transform duration-[7000ms] ease-out ${idx === i ? "scale-105" : "scale-100"}`}
+              className={`h-full w-full object-cover ${s.position ?? "object-center"} transition-transform duration-[7000ms] ease-out ${idx === i ? "scale-100" : "scale-[1.02]"}`}
             />
             <div className="absolute inset-0 bg-gradient-to-r from-ink/70 via-ink/25 to-transparent" />
             <div className="absolute inset-0 mx-auto flex max-w-[1400px] flex-col justify-center px-6 md:px-10">
               {idx === i && (
                 <div key={i} className="max-w-xl animate-fade-up">
-                  <p className="label-lux text-gold">{s.eyebrow}</p>
-                  <h1 className="serif mt-3 text-[2rem] leading-[1.1] text-cream sm:mt-4 sm:text-5xl md:text-6xl">{s.title}</h1>
+                  <h1 className="serif text-[2rem] leading-[1.1] text-cream sm:text-5xl md:text-6xl">{s.title}</h1>
                   <p className="mt-4 max-w-md text-sm leading-relaxed text-cream/80 sm:mt-5 md:text-base">{s.text}</p>
                   <button
                     onClick={() => navigate("/boutique")}
