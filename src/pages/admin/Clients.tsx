@@ -1,6 +1,9 @@
 import { useMemo, useState } from "react";
 import { Card, PageHead, Pill, Btn, Input, Select, Modal, useUI, fcfa, th, td } from "../../components/admin/ui";
 import { useClients } from "../../hooks/useClients";
+import { exportClientsCsv } from "../../api/clients";
+import { downloadBlob, stampedName } from "../../utils/download";
+import { readApiError } from "../../api/axiosConfig";
 import { useOrders } from "../../hooks/useOrders";
 import type { Client } from "../../api/clients";
 import { Search, Download } from "../../components/icons";
@@ -16,6 +19,19 @@ export default function Clients() {
   const [seg, setSeg] = useState("all");
   const [open, setOpen] = useState<Client | null>(null);
 
+  /**
+   * Export du fichier clientes. Il remplace le carnet de contacts du téléphone :
+   * coordonnées, historique d'achat, rien de plus.
+   */
+  async function exportCsv() {
+    try {
+      downloadBlob(await exportClientsCsv(), stampedName("clientes"));
+      toast("Fichier clientes exporté");
+    } catch (error) {
+      toast(readApiError(error, "L'export n'a pas pu être généré."), "error");
+    }
+  }
+
   const filtered = useMemo(
     () => clients.filter((c) => c.name.toLowerCase().includes(q.toLowerCase()) && (seg === "all" || c.segment === seg)),
     [clients, q, seg],
@@ -26,7 +42,7 @@ export default function Clients() {
       <PageHead
         title="Clients"
         sub={`${clients.length} clients enregistrés`}
-        action={<Btn variant="ghost" onClick={() => toast("Export clients généré (consentement respecté)")}><Download /> Exporter</Btn>}
+        action={<Btn variant="ghost" onClick={exportCsv}><Download /> Exporter</Btn>}
       />
 
       <div className="mb-4 grid grid-cols-4 gap-3">
@@ -102,16 +118,8 @@ export default function Clients() {
               )}
             </div>
           </div>
-          <div className="mt-5">
-            <p className="mb-2 text-xs font-medium uppercase tracking-wider" style={{ color: "var(--adm-muted)" }}>Note interne (SAV)</p>
-            <textarea
-              className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none focus:border-[#c9a876]"
-              style={{ background: "var(--adm-surface-2)", borderColor: "var(--adm-border)", color: "var(--adm-text)" }}
-              rows={2} placeholder="Ajouter une note…"
-            />
-          </div>
           <div className="mt-6 flex justify-end">
-            <Btn onClick={() => { toast("Note enregistrée"); setOpen(null); }}>Enregistrer</Btn>
+            <Btn variant="ghost" onClick={() => setOpen(null)}>Fermer</Btn>
           </div>
         </Modal>
       )}

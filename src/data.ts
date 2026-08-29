@@ -14,7 +14,7 @@ export type ProductVariant = {
   colorSlug: string;
   /** Pastille couleur (couleur principale). */
   hex: string;
-  /** Deuxième teinte des modèles bi-matière — pastille en dégradé. */
+  /** Deuxième teinte des modèles bi-matière - pastille en dégradé. */
   hexSecondary?: string;
   images: ProductImage[];
   stock: { qty: number; threshold: number };
@@ -49,9 +49,9 @@ export type Product = {
   price: number;
   compareAt?: number;
   badge?: "Nouveau" | "Promo" | "Rupture";
-  rating: number;
-  reviews: number;
   videoUrl?: string;
+  /** Ex. "Livré avec une pochette assortie" - absent si rien n'est inclus. */
+  includedAccessory?: string;
 
   /** Champs de vitrine dérivés de la première déclinaison (cartes produit). */
   color: string;
@@ -73,11 +73,13 @@ export type Category = {
   name: string;
   slug: string;
   image: string;
+  /** Résumé affiché sous le nom sur la page d'accueil. Absent tant qu'il n'a pas été saisi. */
+  description?: string | null;
   position?: number;
   _count?: { products: number };
 };
 
-export type Zone = { id: string; city: string; country: string; fee: number; freeFrom: number; delay: string; relay: boolean };
+export type Zone = { id: string; city: string; country: string; fee: number; freeFrom: number; delay: string; relay: boolean; active?: boolean };
 
 /** Métadonnées de pagination renvoyées avec toute collection de l'API. */
 export type PageMeta = {
@@ -95,6 +97,9 @@ export type Paginated<T> = { items: T[]; meta: PageMeta };
 export type ProductFacets = {
   materials: string[];
   colors: { name: string; slug: string; hex: string }[];
+  /** Bornes réelles du catalogue : elles cadrent le curseur de prix. */
+  priceMin: number;
+  priceMax: number;
 };
 
 // Prix en francs CFA (FCFA).
@@ -114,5 +119,9 @@ export const dimensionLabels: { key: keyof ProductSpecs; label: string }[] = [
   { key: "handleDropMm", label: "Hauteur des anses" },
 ];
 
-export const SHOP_PHONE_DISPLAY = "709666259";
-export const SHOP_PHONE_WA = "221709666259"; // format international WhatsApp (Sénégal +221)
+/**
+ * Le numéro de la boutique et ses réseaux sociaux ne sont PLUS écrits ici :
+ * ils vivent en base et se modifient depuis Paramètres (voir `useSettings`).
+ * Une constante dans le code obligeait à redéployer le site pour changer un
+ * numéro de téléphone.
+ */

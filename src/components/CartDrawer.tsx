@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useCartStore, useCartTotals } from "../store/useCartStore";
+import { useAuthStore } from "../store/useAuthStore";
 import { useDeliveryZones } from "../hooks/useDeliveryZones";
-import { fcfa, SHOP_PHONE_WA } from "../data";
-import { Close, Plus, Minus, Truck, ArrowRight, WhatsApp } from "./icons";
+import { fcfa } from "../data";
+import { Close, Plus, Minus, Truck, ArrowRight } from "./icons";
 
 export default function CartDrawer() {
+  const navigate = useNavigate();
   const cartOpen = useCartStore((s) => s.cartOpen);
   const setCartOpen = useCartStore((s) => s.setCartOpen);
   const cart = useCartStore((s) => s.cart);
@@ -14,22 +16,28 @@ export default function CartDrawer() {
   const setZone = useCartStore((s) => s.setZone);
   const delivery = useCartStore((s) => s.delivery);
   const setDelivery = useCartStore((s) => s.setDelivery);
+  const user = useAuthStore((s) => s.user);
+  const setAuthOpen = useAuthStore((s) => s.setAuthOpen);
   const { subtotal, count, shipping } = useCartTotals();
   const { data: zones = [] } = useDeliveryZones();
 
-  const [promo, setPromo] = useState("");
-  const [applied, setApplied] = useState(false);
-
   if (!cartOpen) return null;
 
-  const discount = applied ? Math.round(subtotal * 0.1) : 0;
   const freeGap = zone ? Math.max(0, zone.freeFrom - subtotal) : 0;
   const progress = zone ? Math.min(100, (subtotal / zone.freeFrom) * 100) : 0;
-  const total = subtotal - discount + shipping;
+  // Le panier n'affiche plus de remise : les codes promo sont vérifiés par le
+  // serveur à l'étape suivante, seul endroit où le montant fait foi.
+  const total = subtotal + shipping;
 
-  const orderLines = cart.map((l) => `• ${l.product.name} (${l.variant.color}) x${l.qty} - ${fcfa(l.product.price * l.qty)}`).join("%0A");
-  const waMessage = `Bonjour HUWSTORE, je souhaite commander :%0A${orderLines}%0A%0ALivraison : ${delivery === "relay" ? "Point relais / boutique" : "Domicile"}${zone ? ` - ${zone.city} (${zone.country})` : ""}%0ATotal : ${fcfa(total)}`;
-  const waHref = `https://wa.me/${SHOP_PHONE_WA}?text=${waMessage}`;
+  const goToCheckout = () => {
+    setCartOpen(false);
+    // Commander exige un compte : sans session, on ouvre la connexion.
+    if (!user) {
+      setAuthOpen(true);
+      return;
+    }
+    navigate("/commande");
+  };
 
   return (
     <div className="fixed inset-0 z-50">
@@ -53,7 +61,7 @@ export default function CartDrawer() {
             {zone && (
               <div className="border-b border-taupe/20 px-6 py-4">
                 <p className="text-xs text-anthracite">
-                  {freeGap > 0 ? <>Plus que <span className="text-gold-deep font-medium">{fcfa(freeGap)}</span> pour la livraison offerte</> : "🎉 Livraison offerte débloquée"}
+                  {freeGap > 0 ? <>Plus que <span className="text-gold-deep font-medium">{fcfa(freeGap)}</span> pour la livraison offerte</> : "Livraison offerte débloquée"}
                 </p>
                 <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-taupe/25">
                   <div className="h-full rounded-full bg-gold transition-all duration-500" style={{ width: `${progress}%` }} />
@@ -72,7 +80,7 @@ export default function CartDrawer() {
                       <div>
                         <p className="label-lux text-taupe text-[0.58rem]">{l.product.collection}</p>
                         <p className="serif text-base leading-tight">{l.product.name}</p>
-                        <p className="text-xs text-taupe mt-0.5">{l.variant.color} · {l.product.material}</p>
+                        <p className="text-xs text-taupe mt-0.5">{l.variant.color} - {l.product.material}</p>
                       </div>
                       <button onClick={() => remove(l.variant.id)} className="text-taupe text-lg self-start transition-colors hover:text-bordeaux"><Close /></button>
                     </div>
@@ -111,7 +119,7 @@ export default function CartDrawer() {
                     </select>
                     <ArrowRight className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rotate-90 text-taupe" />
                   </div>
-                  <p className="mt-1.5 text-xs text-taupe">Délai estimé : <span className="text-anthracite">{zone.delay}</span> · Frais : {zone.fee === 0 ? "offerts" : fcfa(zone.fee)}</p>
+                  <p className="mt-1.5 text-xs text-taupe">Délai estimé : <span className="text-anthracite">{zone.delay}</span> - Frais : {zone.fee === 0 ? "offerts" : fcfa(zone.fee)}</p>
                 </>
               )}
 
@@ -134,49 +142,25 @@ export default function CartDrawer() {
                 </button>
               </div>
 
-              {/* Code promo */}
-              <div className="mt-4 flex gap-2">
-                <input
-                  value={promo}
-                  onChange={(e) => setPromo(e.target.value)}
-                  placeholder="Code promo"
-                  className="flex-1 border border-taupe/40 bg-transparent px-3 py-2.5 text-xs uppercase tracking-widest outline-none placeholder:text-taupe focus:border-gold"
-                />
-                <button
-                  onClick={() => setApplied(promo.trim().toUpperCase() === "BIENVENUE10")}
-                  className="label-lux border border-ink px-4 text-ink transition-colors hover:bg-ink hover:text-cream"
-                >
-                  Appliquer
-                </button>
-              </div>
-              {applied && <p className="mt-2 text-xs text-bottle">Code BIENVENUE10 appliqué - 10% de réduction</p>}
-              {promo && !applied && <p className="mt-2 text-xs text-bordeaux">Essayez le code BIENVENUE10</p>}
-
               <dl className="mt-4 space-y-1.5 text-sm">
                 <div className="flex justify-between text-anthracite"><dt>Sous-total</dt><dd>{fcfa(subtotal)}</dd></div>
-                {discount > 0 && <div className="flex justify-between text-bottle"><dt>Réduction</dt><dd>−{fcfa(discount)}</dd></div>}
                 <div className="flex justify-between text-anthracite">
-                  <dt>{delivery === "relay" ? "Retrait relais" : "Livraison"}{zone ? ` · ${zone.city}` : ""}</dt>
+                  <dt>{delivery === "relay" ? "Retrait relais" : "Livraison"}{zone ? ` - ${zone.city}` : ""}</dt>
                   <dd>{shipping === 0 ? "Offerte" : fcfa(shipping)}</dd>
                 </div>
                 <div className="flex justify-between border-t border-taupe/25 pt-2 serif text-lg"><dt>Total</dt><dd>{fcfa(total)}</dd></div>
               </dl>
 
-              <button className="group mt-4 flex w-full items-center justify-center gap-2 bg-ink py-4 text-cream transition-colors hover:bg-anthracite active:scale-[0.99]">
-                <span className="label-lux">Passer au paiement</span>
+              <button
+                type="button"
+                onClick={goToCheckout}
+                className="group mt-4 flex w-full items-center justify-center gap-2 bg-ink py-4 text-cream transition-colors hover:bg-anthracite active:scale-[0.99]"
+              >
+                <span className="label-lux">{user ? "Finaliser ma commande" : "Se connecter pour commander"}</span>
                 <ArrowRight className="text-base transition-transform group-hover:translate-x-1" />
               </button>
-              <a
-                href={waHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-2 flex w-full items-center justify-center gap-2 border border-[#25D366] bg-[#25D366]/10 py-3.5 text-[#128C4B] transition-colors hover:bg-[#25D366]/20"
-              >
-                <WhatsApp className="text-lg" />
-                <span className="label-lux">Commander via WhatsApp</span>
-              </a>
               <p className="mt-3 flex items-center justify-center gap-1.5 text-[0.7rem] text-taupe">
-                <Truck className="text-sm" /> Paiement à la livraison · Wave · Orange Money
+                <Truck className="text-sm" /> Paiement à la livraison - Code promo à l'étape suivante
               </p>
             </div>
           </>

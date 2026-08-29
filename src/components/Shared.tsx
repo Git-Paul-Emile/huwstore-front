@@ -2,20 +2,8 @@ import { useNavigate } from "react-router-dom";
 import type { Product } from "../data";
 import { fcfa } from "../data";
 import { useCartStore } from "../store/useCartStore";
-import { Heart, Star, Bag } from "./icons";
-
-export function Stars({ n, reviews }: { n: number; reviews?: number }) {
-  return (
-    <span className="inline-flex items-center gap-1.5 text-gold">
-      <span className="inline-flex text-[0.8rem]">
-        {[1, 2, 3, 4, 5].map((i) => (
-          <Star key={i} filled={i <= n} className={i <= n ? "text-gold" : "text-taupe-soft"} />
-        ))}
-      </span>
-      {reviews != null && <span className="text-taupe text-xs tracking-wide">{reviews} avis</span>}
-    </span>
-  );
-}
+import { useWishlist } from "../hooks/useWishlist";
+import { Heart, Bag } from "./icons";
 
 const badgeStyle: Record<string, string> = {
   Nouveau: "bg-bordeaux text-cream",
@@ -25,10 +13,9 @@ const badgeStyle: Record<string, string> = {
 
 export function ProductCard({ p }: { p: Product }) {
   const navigate = useNavigate();
-  const wishlist = useCartStore((s) => s.wishlist);
-  const toggleWish = useCartStore((s) => s.toggleWish);
+  const { has, toggle: toggleWish } = useWishlist();
   const addToCart = useCartStore((s) => s.addToCart);
-  const wished = wishlist.includes(p.id);
+  const wished = has(p.id);
   // Sur une carte produit on n'a pas de sélecteur de couleur : on ajoute la
   // première déclinaison encore en stock, l'acheteur peut la changer ensuite.
   const defaultVariant = p.variants?.find((v) => v.available) ?? p.variants?.[0];
@@ -69,7 +56,7 @@ export function ProductCard({ p }: { p: Product }) {
         <p className="label-lux text-taupe">{p.collection}</p>
         <button
           onClick={() => navigate(`/produit/${p.id}`)}
-          className="serif mt-1 line-clamp-2 min-h-[2.8rem] text-lg leading-tight text-ink transition-colors hover:text-gold-deep"
+          className="serif mt-1 line-clamp-2 min-h-[2.8rem] text-left text-lg leading-tight text-ink transition-colors hover:text-gold-deep"
         >
           {p.name}
         </button>

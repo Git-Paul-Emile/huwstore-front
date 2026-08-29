@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+# Le back-office et le tunnel de commande n'ont rien à faire dans un index.
+Disallow: /admin
+Disallow: /commande
+Disallow: /compte
+
+Sitemap: https://huwstore.sn/sitemap.xml

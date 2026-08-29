@@ -1,11 +1,17 @@
 import { useState } from "react";
-import { SHOP_PHONE_WA } from "../data";
+import { useShop } from "../hooks/useSettings";
 import { Close, WhatsApp } from "./icons";
 
 export default function WhatsAppWidget() {
   const [open, setOpen] = useState(false);
-  const href = `https://wa.me/${SHOP_PHONE_WA}?text=${encodeURIComponent(
-    "Bonjour HUWSTORE, je souhaite passer commande / avoir des informations.",
+  const shop = useShop();
+
+  // Sans numero configure, le widget ne s'affiche pas : mieux vaut aucun bouton
+  // qu'un bouton qui ouvre une discussion avec personne.
+  if (!shop.whatsapp) return null;
+
+  const href = `https://wa.me/${shop.whatsapp}?text=${encodeURIComponent(
+    `Bonjour ${shop.shopName}, je souhaite passer commande / avoir des informations.`,
   )}`;
 
   return (
@@ -16,8 +22,8 @@ export default function WhatsAppWidget() {
           <div className="flex items-center gap-3 bg-[#128C4B] px-4 py-3.5 text-cream">
             <span className="grid h-9 w-9 place-items-center rounded-full bg-cream/15 text-lg"><WhatsApp /></span>
             <div className="leading-tight">
-              <p className="text-sm font-semibold">HUWSTORE</p>
-              <p className="text-[0.7rem] text-cream/80">En ligne · répond en quelques minutes</p>
+              <p className="text-sm font-semibold">{shop.shopName}</p>
+              <p className="text-[0.7rem] text-cream/80">En ligne - répond en quelques minutes</p>
             </div>
           </div>
           <div className="px-4 py-4">
@@ -40,10 +46,9 @@ export default function WhatsAppWidget() {
       <button
         onClick={() => setOpen((o) => !o)}
         aria-label="Commander via WhatsApp"
-        className="group flex items-center gap-2.5 rounded-full bg-[#25D366] py-3.5 pl-4 pr-5 text-cream shadow-[0_12px_30px_-8px_rgba(37,211,102,0.7)] transition-all hover:bg-[#128C4B] active:scale-95"
+        className="flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-cream transition-colors hover:bg-[#128C4B] active:scale-95"
       >
         {open ? <Close className="text-2xl" /> : <WhatsApp className="text-2xl" />}
-        <span className="label-lux hidden text-cream sm:inline">Commander sur WhatsApp</span>
       </button>
     </div>
   );

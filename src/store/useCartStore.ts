@@ -6,7 +6,7 @@ import type { Product, ProductVariant, Zone } from "../data";
 /**
  * Une ligne de panier porte le produit ET la déclinaison choisie : on
  * n'achète pas « un tote bag » mais « un tote bag noir ». La clé de ligne est
- * donc l'identifiant de variante — deux coloris du même modèle sont deux
+ * donc l'identifiant de variante - deux coloris du même modèle sont deux
  * lignes distinctes, comme dans n'importe quelle boutique.
  */
 export type CartLine = { product: Product; variant: ProductVariant; qty: number };
@@ -15,6 +15,13 @@ export type DeliveryMethod = "home" | "relay";
 type CartState = {
   cart: CartLine[];
   wishlist: string[];
+  /**
+   * Produit qu'une visiteuse non connectée vient de vouloir mettre en favori :
+   * ajouter un favori exige désormais un compte, donc on mémorise son intention
+   * le temps qu'elle se connecte (ou en crée un), pour la compléter ensuite
+   * sans lui faire recliquer sur le cœur.
+   */
+  pendingWishlist: string | null;
   zone: Zone | null;
   delivery: DeliveryMethod;
   cartOpen: boolean;
@@ -24,6 +31,9 @@ type CartState = {
   clear: () => void;
   setCartOpen: (open: boolean) => void;
   toggleWish: (productId: string) => void;
+  /** Vidée une fois la liste locale versée dans le compte du client. */
+  clearWishlist: () => void;
+  setPendingWishlist: (productId: string | null) => void;
   setZone: (zone: Zone) => void;
   setDelivery: (method: DeliveryMethod) => void;
 };
@@ -33,6 +43,7 @@ export const useCartStore = create<CartState>()(
     (set) => ({
       cart: [],
       wishlist: [],
+      pendingWishlist: null,
       zone: null,
       delivery: "home",
       cartOpen: false,
@@ -68,6 +79,10 @@ export const useCartStore = create<CartState>()(
             ? state.wishlist.filter((id) => id !== productId)
             : [...state.wishlist, productId],
         })),
+
+      clearWishlist: () => set({ wishlist: [] }),
+
+      setPendingWishlist: (pendingWishlist) => set({ pendingWishlist }),
 
       setZone: (zone) => set({ zone }),
       setDelivery: (delivery) => set({ delivery }),

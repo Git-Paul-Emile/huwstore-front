@@ -1,22 +1,32 @@
 import { useState } from "react";
 import { Card, PageHead, Btn, useUI, fcfa } from "../../components/admin/ui";
-import { useSalesByCategory } from "../../hooks/useStats";
+import { useSalesByCategory, useTopProducts } from "../../hooks/useStats";
 import { useOrders } from "../../hooks/useOrders";
-import { useProducts } from "../../hooks/useProducts";
+import { exportOrdersCsv } from "../../api/orders";
 import { Download } from "../../components/icons";
+import { downloadBlob, stampedName } from "../../utils/download";
 
 export default function Stats() {
   const { toast } = useUI();
   const [period, setPeriod] = useState("30");
   const { data: salesByCategory = [] } = useSalesByCategory();
   const { data: orders = [] } = useOrders();
-  const { data: products = [] } = useProducts();
+  const { data: top = [] } = useTopProducts(Number(period), 5);
 
   const ca = orders.reduce((n, o) => n + (o.pay === "Payé" ? o.total : 0), 0);
   const paidCount = orders.filter((o) => o.pay === "Payé").length;
   const avg = Math.round(ca / Math.max(1, paidCount));
-  const top = products.slice(0, 5);
   const categoryTotal = salesByCategory.reduce((n, c) => n + c.value, 0) || 1;
+
+  async function exportReport() {
+    try {
+      const blob = await exportOrdersCsv();
+      downloadBlob(blob, stampedName("rapport-commandes"));
+      toast("Rapport téléchargé");
+    } catch {
+      toast("Le rapport n'a pas pu être généré");
+    }
+  }
 
   return (
     <div>
@@ -28,7 +38,7 @@ export default function Stats() {
             <select value={period} onChange={(e) => setPeriod(e.target.value)} className="rounded-lg border px-3 py-2.5 text-sm" style={{ background: "var(--adm-surface)", borderColor: "var(--adm-border)", color: "var(--adm-text)" }}>
               <option value="7">7 jours</option><option value="30">30 jours</option><option value="90">90 jours</option>
             </select>
-            <Btn variant="ghost" onClick={() => toast("Rapport exporté")}><Download /> Rapport</Btn>
+            <Btn variant="ghost" onClick={exportReport}><Download /> Exporter</Btn>
           </div>
         }
       />
@@ -37,8 +47,8 @@ export default function Stats() {
         {[
           { l: "Chiffre d'affaires", v: fcfa(ca) },
           { l: "Panier moyen", v: fcfa(avg) },
-          { l: "Taux de conversion", v: "3,8 %" },
-          { l: "Commandes payées", v: String(paidCount) },
+          { l: "Commandes encaissées", v: String(paidCount) },
+          { l: "Articles vendus", v: String(top.reduce((n, p) => n + p.qtySold, 0)) },
         ].map((k) => (
           <Card key={k.l} className="p-5">
             <p className="text-xs uppercase tracking-wider" style={{ color: "var(--adm-muted)" }}>{k.l}</p>
@@ -67,16 +77,28 @@ export default function Stats() {
         </Card>
 
         <Card className="p-5">
-          <h3 className="serif text-lg" style={{ color: "var(--adm-text)" }}>Top produits</h3>
+          <h3 className="serif text-lg" style={{ color: "var(--adm-text)" }}>Sacs les plus vendus</h3>
+          <p className="mt-1 text-xs" style={{ color: "var(--adm-muted)" }}>
+            Classement par quantité réellement vendue sur {period} jours.
+          </p>
           <div className="mt-4 space-y-3">
             {top.map((p, i) => (
               <div key={p.id} className="flex items-center gap-3">
                 <span className="serif text-lg" style={{ color: "var(--adm-muted)" }}>{i + 1}</span>
-                <img src={p.image} alt={p.imageAlt} className="h-10 w-8 rounded object-cover" />
-                <span className="flex-1 text-sm" style={{ color: "var(--adm-text)" }}>{p.name}</span>
-                <span className="text-sm" style={{ color: "var(--adm-muted)" }}>{fcfa(p.price)}</span>
+                {p.image && <img src={p.image} alt="" className="h-10 w-8 rounded object-cover" />}
+                <span className="flex-1 text-sm" style={{ color: "var(--adm-text)" }}>
+                  {p.name}
+                  <span className="block text-xs" style={{ color: "var(--adm-muted)" }}>{p.category}</span>
+                </span>
+                <span className="text-right text-sm" style={{ color: "var(--adm-text)" }}>
+                  {p.qtySold} vendu{p.qtySold > 1 ? "s" : ""}
+                  <span className="block text-xs" style={{ color: "var(--adm-muted)" }}>{fcfa(p.revenue)}</span>
+                </span>
               </div>
             ))}
+            {top.length === 0 && (
+              <p className="text-sm" style={{ color: "var(--adm-muted)" }}>Pas encore de vente sur la période.</p>
+            )}
           </div>
         </Card>
       </div>

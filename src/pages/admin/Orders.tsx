@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, PageHead, Pill, Btn, Select, Modal, useUI, fcfa, th, td } from "../../components/admin/ui";
-import { useOrders, useUpdateOrder } from "../../hooks/useOrders";
-import type { Order, OrderStatus } from "../../api/orders";
+import { useOrderPage, useUpdateOrder } from "../../hooks/useOrders";
+import { exportOrdersCsv, type Order, type OrderStatus } from "../../api/orders";
 import { Download, Truck, Check } from "../../components/icons";
+import { downloadBlob, stampedName } from "../../utils/download";
 
 const flow: OrderStatus[] = ["En préparation", "Expédiée", "En cours de livraison", "Livrée"];
 const payTone = (p: Order["pay"]) => (p === "Payé" ? "green" : p === "En attente" ? "amber" : "red");
@@ -11,17 +12,52 @@ const statusTone = (s: OrderStatus) =>
 
 export default function Orders() {
   const { toast } = useUI();
-  const { data: rows = [] } = useOrders();
-  const updateOrder = useUpdateOrder();
   const [pay, setPay] = useState("all");
   const [status, setStatus] = useState("all");
+  const [page, setPage] = useState(1);
   const [openId, setOpenId] = useState<string | null>(null);
 
-  const filtered = useMemo(
-    () => rows.filter((o) => (pay === "all" || o.pay === pay) && (status === "all" || o.status === status)),
-    [rows, pay, status],
-  );
+  /**
+   * Filtrage ET pagination faits PAR LE SERVEUR (comme la boutique publique,
+   * `Listing.tsx`) : filtrer en mémoire une page chargée sans limite explicite
+   * ne portait que sur les 25 premières commandes renvoyées par défaut par
+   * l'API, ce qui rendait les filtres muets dès que la boutique dépassait ce
+   * volume.
+   */
+  const { data: pageData, isLoading } = useOrderPage({
+    ...(pay !== "all" ? { pay: pay as Order["pay"] } : {}),
+    ...(status !== "all" ? { status: status as OrderStatus } : {}),
+    page,
+    limit: 25,
+  });
+  const rows = pageData?.items ?? [];
+  const meta = pageData?.meta;
+  const updateOrder = useUpdateOrder();
+
+  // Changer un filtre ramène à la première page, sinon rester page 3 après
+  // avoir filtré afficherait une page vide sans explication.
+  useEffect(() => {
+    setPage(1);
+  }, [pay, status]);
+
   const open = rows.find((o) => o.id === openId) ?? null;
+
+  /**
+   * Export CSV. Le serveur renvoie un fichier : on le télécharge via une URL
+   * temporaire d'objet, révoquée juste après pour ne pas fuir de mémoire.
+   */
+  async function exportCsv() {
+    try {
+      const blob = await exportOrdersCsv({
+        ...(pay !== "all" ? { pay: pay as Order["pay"] } : {}),
+        ...(status !== "all" ? { status: status as OrderStatus } : {}),
+      });
+      downloadBlob(blob, stampedName("commandes"));
+      toast("Export téléchargé");
+    } catch {
+      toast("L'export n'a pas pu être généré");
+    }
+  }
 
   const advance = (o: Order) => {
     const i = flow.indexOf(o.status);
@@ -29,7 +65,7 @@ export default function Orders() {
     const next = flow[i + 1];
     updateOrder.mutate(
       { id: o.id, input: { status: next } },
-      { onSuccess: () => toast(`${o.id} → ${next} · notification WhatsApp envoyée au client`) },
+      { onSuccess: () => toast(`${o.id} → ${next}`) },
     );
   };
 
@@ -37,8 +73,8 @@ export default function Orders() {
     <div>
       <PageHead
         title="Commandes & livraison"
-        sub={`${rows.length} commandes`}
-        action={<Btn variant="ghost" onClick={() => toast("Rapport commandes exporté")}><Download /> Exporter</Btn>}
+        sub={isLoading ? "Chargement…" : `${meta?.total ?? 0} commandes`}
+        action={<Btn variant="ghost" onClick={exportCsv}><Download /> Exporter en CSV</Btn>}
       />
 
       <Card className="mb-4 p-4">
@@ -65,7 +101,7 @@ export default function Orders() {
               </tr>
             </thead>
             <tbody className="divide-y" style={{ borderColor: "var(--adm-border)" }}>
-              {filtered.map((o) => (
+              {rows.map((o) => (
                 <tr key={o.id} className="hover:bg-[var(--adm-hover)]">
                   <td className={td}><span className="font-medium" style={{ color: "var(--adm-text)" }}>{o.id}</span></td>
                   <td className={td} style={{ color: "var(--adm-muted)" }}>{o.client}<br /><span className="text-xs">{o.city}</span></td>
@@ -76,10 +112,33 @@ export default function Orders() {
                   <td className={`${td} text-right`}><Btn variant="ghost" onClick={() => setOpenId(o.id)}>Détail</Btn></td>
                 </tr>
               ))}
+              {rows.length === 0 && !isLoading && (
+                <tr>
+                  <td className={td} colSpan={7}>
+                    <span style={{ color: "var(--adm-muted)" }}>Aucune commande ne correspond à ces filtres.</span>
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
       </Card>
+
+      {meta && meta.totalPages > 1 && (
+        <nav aria-label="Pagination" className="mt-4 flex flex-wrap items-center justify-center gap-2">
+          <Btn variant="ghost" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={!meta.hasPrev}>
+            Précédent
+          </Btn>
+          {Array.from({ length: meta.totalPages }, (_, i) => i + 1).map((n) => (
+            <Btn key={n} variant={n === meta.page ? "primary" : "ghost"} onClick={() => setPage(n)}>
+              {n}
+            </Btn>
+          ))}
+          <Btn variant="ghost" onClick={() => setPage((p) => p + 1)} disabled={!meta.hasNext}>
+            Suivant
+          </Btn>
+        </nav>
+      )}
 
       {open && (
         <Modal title={`Commande ${open.id}`} onClose={() => setOpenId(null)} wide>
@@ -104,8 +163,15 @@ export default function Orders() {
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="rounded-lg border p-3" style={{ borderColor: "var(--adm-border)" }}>
-              <p className="text-xs uppercase tracking-wider" style={{ color: "var(--adm-muted)" }}>Client</p>
-              <p className="mt-1 text-sm" style={{ color: "var(--adm-text)" }}>{open.client} · {open.city}, {open.country}</p>
+              <p className="text-xs uppercase tracking-wider" style={{ color: "var(--adm-muted)" }}>Livraison</p>
+              <p className="mt-1 text-sm" style={{ color: "var(--adm-text)" }}>{open.client}</p>
+              <a href={`tel:${open.phone}`} className="text-sm hover:underline" style={{ color: "var(--adm-text)" }}>{open.phone}</a>
+              <p className="text-sm" style={{ color: "var(--adm-muted)" }}>{open.addressLine}</p>
+              {open.landmark && <p className="text-sm italic" style={{ color: "var(--adm-muted)" }}>{open.landmark}</p>}
+              <p className="text-sm" style={{ color: "var(--adm-muted)" }}>{open.city}, {open.country} - {open.deliveryMode}</p>
+              {open.note && (
+                <p className="mt-2 text-xs" style={{ color: "var(--adm-text)" }}>Note : {open.note}</p>
+              )}
             </div>
             <div className="rounded-lg border p-3" style={{ borderColor: "var(--adm-border)" }}>
               <p className="text-xs uppercase tracking-wider" style={{ color: "var(--adm-muted)" }}>Paiement</p>
@@ -116,12 +182,23 @@ export default function Orders() {
           <div className="mt-4 rounded-lg border" style={{ borderColor: "var(--adm-border)" }}>
             {open.items.map((it, i) => (
               <div key={i} className="flex justify-between border-b px-4 py-2.5 text-sm last:border-0" style={{ borderColor: "var(--adm-border)" }}>
-                <span style={{ color: "var(--adm-text)" }}>{it.name}{it.color ? ` — ${it.color}` : ""} × {it.qty}</span>
+                <span style={{ color: "var(--adm-text)" }}>{it.name}{it.color ? ` - ${it.color}` : ""} × {it.qty}</span>
                 <span style={{ color: "var(--adm-muted)" }}>{fcfa(it.price * it.qty)}</span>
               </div>
             ))}
+            <div className="flex justify-between px-4 pt-2.5 text-sm" style={{ color: "var(--adm-muted)" }}>
+              <span>Sous-total</span><span>{fcfa(open.subtotal)}</span>
+            </div>
+            <div className="flex justify-between px-4 pt-1 text-sm" style={{ color: "var(--adm-muted)" }}>
+              <span>Livraison</span><span>{open.shippingFee === 0 ? "Offerte" : fcfa(open.shippingFee)}</span>
+            </div>
+            {open.discount > 0 && (
+              <div className="flex justify-between px-4 pt-1 text-sm" style={{ color: "var(--adm-muted)" }}>
+                <span>Remise{open.promoCode ? ` (${open.promoCode})` : ""}</span><span>−{fcfa(open.discount)}</span>
+              </div>
+            )}
             <div className="flex justify-between px-4 py-2.5 text-sm font-semibold" style={{ color: "var(--adm-text)" }}>
-              <span>Total</span><span>{fcfa(open.total)}</span>
+              <span>Total à encaisser</span><span>{fcfa(open.total)}</span>
             </div>
           </div>
 
@@ -133,11 +210,13 @@ export default function Orders() {
                 onChange={(e) => updateOrder.mutate({ id: open.id, input: { courier: e.target.value } })}
                 className="mt-1.5"
               >
-                <option>-</option><option>Livreur interne · Moussa</option><option>DHL Express</option><option>Prestataire · Chronopost</option>
+                <option>-</option><option>Livreur - Moussa</option><option>Livreur - Ibrahima</option><option>Retrait en point relais</option>
               </Select>
             </label>
             <div className="flex items-end gap-2">
-              <Btn variant="ghost" onClick={() => toast("Facture PDF générée")}>Facture PDF</Btn>
+              <Btn variant="ghost" onClick={() => window.open(`/commande/${open.id}`, "_blank", "noopener")}>
+                Reçu imprimable
+              </Btn>
               <Btn onClick={() => advance(open)} disabled={open.status === "Livrée" || open.status === "Retournée"}>
                 <Truck /> Étape suivante
               </Btn>

@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { Card, PageHead, Pill, Btn, Input, Select, Modal, useUI, th, td } from "../../components/admin/ui";
 import { useAdjustStock, useStock, useStockMovements } from "../../hooks/useStock";
+import { exportStockCsv } from "../../api/stock";
+import { downloadBlob, stampedName } from "../../utils/download";
+import { readApiError } from "../../api/axiosConfig";
 import { Download, Alert } from "../../components/icons";
 
 export default function Stock() {
@@ -9,6 +12,16 @@ export default function Stock() {
   const { data: movements = [] } = useStockMovements();
   const adjustStock = useAdjustStock();
   const [adjust, setAdjust] = useState<string | null>(null);
+
+  /** Inventaire exportable : c'est le cahier de stock que ce fichier remplace. */
+  async function exportCsv() {
+    try {
+      downloadBlob(await exportStockCsv(), stampedName("stock"));
+      toast("Inventaire exporté");
+    } catch (error) {
+      toast(readApiError(error, "L'export n'a pas pu être généré."), "error");
+    }
+  }
 
   const tone = (qty: number, threshold: number) => (qty === 0 ? "red" : qty <= threshold ? "amber" : "green");
   const critical = stock.filter((s) => s.qty <= s.threshold);
@@ -19,14 +32,14 @@ export default function Stock() {
       <PageHead
         title="Gestion de stock"
         sub={`${critical.length} référence(s) à surveiller`}
-        action={<Btn variant="ghost" onClick={() => toast("Export CSV généré")}><Download /> Exporter (CSV)</Btn>}
+        action={<Btn variant="ghost" onClick={exportCsv}><Download /> Exporter (CSV)</Btn>}
       />
 
       {critical.length > 0 && (
         <Card className="mb-4 flex items-start gap-3 border-l-4 border-l-amber-500 p-4">
           <span className="mt-0.5 text-amber-500"><Alert /></span>
           <p className="text-sm" style={{ color: "var(--adm-text)" }}>
-            <b>Stock critique :</b> {critical.map((s) => `${s.product} (${s.color})`).join(", ")}. Notification envoyée au gestionnaire de stock.
+            <b>À réapprovisionner :</b> {critical.map((s) => `${s.product} (${s.color})`).join(", ")}.
           </p>
         </Card>
       )}

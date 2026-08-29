@@ -1,27 +1,30 @@
 import { useEffect, useState, type ReactElement } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { ToastProvider } from "../components/admin/ui";
-import { SHOP_PHONE_DISPLAY } from "../data";
+import { useShop } from "../hooks/useSettings";
 import {
-  Grid, Box, Layers, Users, Image, Truck, Tag, Star, Chart, Cog,
+  Grid, Box, Layers, Users, Image, Truck, Tag, Chat, Chart, Cog, Archive,
   Bell, Sun, Moon, Search, ChevronLeft, ChevronRight, Command, ArrowRight,
 } from "../components/icons";
 
 const nav: { path: string; label: string; icon: (p: { className?: string }) => ReactElement }[] = [
   { path: "", label: "Tableau de bord", icon: Grid },
   { path: "produits", label: "Produits", icon: Box },
+  { path: "categories", label: "Catégories", icon: Archive },
   { path: "stock", label: "Stock", icon: Layers },
   { path: "commandes", label: "Commandes & livraison", icon: Truck },
   { path: "clients", label: "Clients", icon: Users },
   { path: "bannieres", label: "Bannières", icon: Image },
   { path: "promos", label: "Promotions", icon: Tag },
-  { path: "avis", label: "Avis clients", icon: Star },
+  { path: "temoignages", label: "Témoignages", icon: Chat },
+  { path: "avis", label: "Avis sur le site", icon: Bell },
   { path: "stats", label: "Statistiques", icon: Chart },
   { path: "parametres", label: "Paramètres", icon: Cog },
 ];
 
 export default function AdminLayout() {
   const navigate = useNavigate();
+  const shop = useShop();
   const [dark, setDark] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [palette, setPalette] = useState(false);
@@ -50,10 +53,12 @@ export default function AdminLayout() {
           style={{ background: "var(--adm-nav)", color: "var(--adm-nav-text)" }}
         >
           <div className="flex items-center gap-2 px-4 py-5">
-            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#c9a876] text-sm font-bold text-black">MW</span>
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#c9a876] text-sm font-bold text-black">
+              {shop.shopName.slice(0, 2).toUpperCase()}
+            </span>
             {!collapsed && (
               <div className="leading-tight">
-                <p className="serif text-base">HUWSTORE</p>
+                <p className="serif text-base">{shop.shopName}</p>
                 <p className="text-[0.6rem] opacity-60">Back-office</p>
               </div>
             )}
@@ -161,7 +166,7 @@ export default function AdminLayout() {
                 {paletteResults.length === 0 && <p className="px-3 py-4 text-sm" style={{ color: "var(--adm-muted)" }}>Aucun résultat.</p>}
               </div>
               <div className="border-t px-4 py-2 text-center text-[0.65rem]" style={{ borderColor: "var(--adm-border)", color: "var(--adm-muted)" }}>
-                Boutique #{SHOP_PHONE_DISPLAY} · Échap pour fermer
+                {shop.shopName} - Échap pour fermer
               </div>
             </div>
           </div>

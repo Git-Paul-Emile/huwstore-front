@@ -1,28 +1,39 @@
-import { useState, type ReactElement } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, type FormEvent, type ReactElement } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuthStore } from "../store/useAuthStore";
 import { useCartStore } from "../store/useCartStore";
+import { useUpdateProfile } from "../hooks/useAuth";
+import { downloadInvoice } from "../api/orders";
+import { readApiError } from "../api/axiosConfig";
 import { useToastStore } from "../store/useToastStore";
 import { useMyOrders } from "../hooks/useOrders";
 import { useProducts } from "../hooks/useProducts";
-import { fcfa, SHOP_PHONE_WA } from "../data";
+import { useWishlist } from "../hooks/useWishlist";
+import {
+  useAddresses,
+  useCreateAddress,
+  useDeleteAddress,
+  useSetDefaultAddress,
+} from "../hooks/useAddresses";
+import type { AddressInput } from "../api/addresses";
+import { useSeo } from "../hooks/useSeo";
+import { fcfa } from "../data";
+import { useShop } from "../hooks/useSettings";
 import type { Order, OrderStatus } from "../api/orders";
 import { ProductCard } from "../components/Shared";
 import {
-  Grid, Bag, User, MapPin, Card as CardIcon, Heart, Star, Chat,
-  ArrowRight, Check, Truck, LogOut, Plus, Lock,
+  Grid, Bag, User, MapPin, Heart, Chat, Download,
+  ArrowRight, Check, Truck, LogOut, Plus, Close,
 } from "../components/icons";
 
-type Tab = "overview" | "orders" | "profile" | "addresses" | "payment" | "wishlist" | "reviews" | "support";
+type Tab = "overview" | "orders" | "profile" | "addresses" | "wishlist" | "support";
 
 const tabs: { key: Tab; label: string; icon: (p: { className?: string }) => ReactElement }[] = [
   { key: "overview", label: "Vue d'ensemble", icon: Grid },
   { key: "orders", label: "Mes commandes", icon: Bag },
   { key: "profile", label: "Mes informations", icon: User },
   { key: "addresses", label: "Mes adresses", icon: MapPin },
-  { key: "payment", label: "Moyens de paiement", icon: CardIcon },
   { key: "wishlist", label: "Mes favoris", icon: Heart },
-  { key: "reviews", label: "Mes avis", icon: Star },
   { key: "support", label: "Support", icon: Chat },
 ];
 
@@ -38,7 +49,12 @@ export default function Account() {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const navigate = useNavigate();
-  const [tab, setTab] = useState<Tab>("overview");
+  const [searchParams] = useSearchParams();
+  // Le lien favoris de l'en-tête ouvre directement l'onglet (/compte?tab=wishlist).
+  const requestedTab = searchParams.get("tab");
+  const initialTab = tabs.some((t) => t.key === requestedTab) ? (requestedTab as Tab) : "overview";
+  const [tab, setTab] = useState<Tab>(initialTab);
+  useSeo({ title: "Mon compte", noindex: true });
 
   if (!user) {
     return (
@@ -102,9 +118,7 @@ export default function Account() {
           {tab === "orders" && <Orders />}
           {tab === "profile" && <Profile />}
           {tab === "addresses" && <Addresses />}
-          {tab === "payment" && <Payment />}
           {tab === "wishlist" && <Wishlist />}
-          {tab === "reviews" && <Reviews />}
           {tab === "support" && <Support />}
         </div>
       </div>
@@ -126,22 +140,18 @@ function Panel({ title, children, action }: { title: string; children: React.Rea
 
 function Overview({ onGo }: { onGo: (t: Tab) => void }) {
   const user = useAuthStore((s) => s.user);
-  const wishlist = useCartStore((s) => s.wishlist);
+  const { ids: wishlist } = useWishlist();
   const { data: orders = [] } = useMyOrders();
   const last = orders[0];
+  const spent = orders.reduce((sum, order) => sum + order.total, 0);
 
   return (
     <div className="space-y-6">
-      {/* Fidélité */}
-      <div className="flex flex-col gap-4 rounded-2xl bg-ink p-6 text-cream sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="label-lux text-gold">Cercle Maïa · Palier Or</p>
-          <p className="serif mt-2 text-2xl">1 240 points</p>
-          <p className="mt-1 text-xs text-cream/60">Plus que 260 points avant le palier VIP</p>
-        </div>
-        <div className="h-2 w-full overflow-hidden rounded-full bg-cream/15 sm:w-48">
-          <div className="h-full rounded-full bg-gold" style={{ width: "82%" }} />
-        </div>
+      {/* Repères de compte. Chiffres réels : aucun programme de fidélité n'existe. */}
+      <div className="grid grid-cols-2 gap-3 rounded-2xl bg-ink p-6 text-cream sm:grid-cols-3">
+        <Stat label="Commandes" value={String(orders.length)} />
+        <Stat label="Total commandé" value={fcfa(spent)} />
+        <Stat label="Favoris" value={String(wishlist.length)} />
       </div>
 
       {/* Dernière commande */}
@@ -154,7 +164,7 @@ function Overview({ onGo }: { onGo: (t: Tab) => void }) {
           <div className="mt-3 flex items-center justify-between">
             <div>
               <p className="serif text-lg">{last.id}</p>
-              <p className="text-sm text-taupe">{new Date(last.date).toLocaleDateString("fr-FR")} · {fcfa(last.total)}</p>
+              <p className="text-sm text-taupe">{new Date(last.date).toLocaleDateString("fr-FR")} - {fcfa(last.total)}</p>
             </div>
             <button onClick={() => onGo("orders")} className="label-lux flex items-center gap-2 text-gold-deep hover:underline">
               Suivre <ArrowRight />
@@ -183,9 +193,55 @@ function Overview({ onGo }: { onGo: (t: Tab) => void }) {
 
 function Orders() {
   const toast = useToastStore((s) => s.toast);
+  const shop = useShop();
   const { data: orders = [] } = useMyOrders();
+  const { data: products = [] } = useProducts();
+  const addToCart = useCartStore((s) => s.addToCart);
   const [open, setOpen] = useState<Order | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
   const flow: OrderStatus[] = ["En préparation", "Expédiée", "Livrée"];
+
+  /** Télécharge la facture PDF émise par le serveur pour cette commande. */
+  async function getInvoice(orderId: string) {
+    setBusy(orderId);
+    try {
+      const blob = await downloadInvoice(orderId);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `facture-${orderId}.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      toast(readApiError(error, "La facture n'a pas pu être téléchargée."));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  /**
+   * Remet au panier les articles encore disponibles. Un modèle retiré du
+   * catalogue ou une couleur épuisée est signalé plutôt qu'ajouté en silence.
+   */
+  function reorder(order: Order) {
+    let added = 0;
+    let missing = 0;
+
+    for (const item of order.items) {
+      const product = products.find((p) => p.id === item.productId);
+      const variant = product?.variants?.find((v) => v.id === item.variantId);
+      if (!product || !variant || !variant.available) {
+        missing += 1;
+        continue;
+      }
+      for (let i = 0; i < item.qty; i++) addToCart(product, variant);
+      added += 1;
+    }
+
+    if (added === 0) toast("Ces articles ne sont plus disponibles.");
+    else if (missing > 0) toast(`${added} article(s) ajouté(s) - ${missing} indisponible(s).`);
+    else toast("Articles ajoutés au panier");
+  }
 
   return (
     <Panel title="Mes commandes">
@@ -196,7 +252,7 @@ function Orders() {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="serif text-lg">{o.id}</p>
-                <p className="text-sm text-taupe">{new Date(o.date).toLocaleDateString("fr-FR")} · {o.items.map((i) => `${i.name} ×${i.qty}`).join(", ")}</p>
+                <p className="text-sm text-taupe">{new Date(o.date).toLocaleDateString("fr-FR")} - {o.items.map((i) => `${i.name} ×${i.qty}`).join(", ")}</p>
               </div>
               <div className="flex items-center gap-4">
                 <span className="text-sm">{fcfa(o.total)}</span>
@@ -224,13 +280,23 @@ function Orders() {
                     })}
                   </div>
                 )}
+                {o.tracking && (
+                  <p className="mb-3 text-sm text-taupe">
+                    <Truck className="mr-1.5 inline text-gold-deep" />
+                    Suivi : <span className="text-anthracite">{o.tracking}</span>
+                    {o.courier && <span className="text-taupe"> - {o.courier}</span>}
+                  </p>
+                )}
                 <div className="flex flex-wrap gap-2">
-                  {o.status === "Expédiée" && <Btn onClick={() => toast("Ouverture du suivi…")}><Truck /> Suivre ma livraison</Btn>}
-                  <Btn ghost onClick={() => toast("Articles ajoutés au panier")}>Recommander</Btn>
-                  {o.status === "Livrée" && <Btn ghost onClick={() => toast("Demande de retour envoyée")}>Retour / échange</Btn>}
-                  <a href={`https://wa.me/${SHOP_PHONE_WA}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 border border-[#25D366] px-4 py-2.5 text-sm text-[#128C4B] transition-colors hover:bg-[#25D366]/10">
-                    <Chat /> Support WhatsApp
-                  </a>
+                  <Btn onClick={() => getInvoice(o.id)}>
+                    <Download /> {busy === o.id ? "Préparation…" : "Télécharger la facture"}
+                  </Btn>
+                  <Btn ghost onClick={() => reorder(o)}>Recommander</Btn>
+                  {shop.whatsapp && (
+                    <a href={`https://wa.me/${shop.whatsapp}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 border border-[#25D366] px-4 py-2.5 text-sm text-[#128C4B] transition-colors hover:bg-[#25D366]/10">
+                      <Chat /> Support WhatsApp
+                    </a>
+                  )}
                 </div>
               </div>
             )}
@@ -244,92 +310,206 @@ function Orders() {
 function Profile() {
   const user = useAuthStore((s) => s.user);
   const toast = useToastStore((s) => s.toast);
-  const [prefs, setPrefs] = useState({ WhatsApp: true, SMS: true, Email: false });
+  const updateProfile = useUpdateProfile();
+  const [error, setError] = useState<string | null>(null);
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    // On garde une référence au formulaire : `event.currentTarget` vaut null
+    // une fois la requête revenue, React ayant déjà rendu à nouveau.
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    const currentPassword = String(data.get("currentPassword") ?? "");
+    const newPassword = String(data.get("newPassword") ?? "");
+
+    updateProfile.mutate(
+      {
+        name: String(data.get("name") ?? ""),
+        // Une chaîne vide efface l'adresse enregistrée, `null` le dit à l'API.
+        email: String(data.get("email") ?? "").trim() || null,
+        ...(newPassword ? { currentPassword, newPassword } : {}),
+      },
+      {
+        onSuccess: () => {
+          toast("Informations enregistrées");
+          // Seuls les mots de passe sont vidés : le nom et l'e-mail restent
+          // affichés tels qu'ils viennent d'être enregistrés.
+          form.querySelectorAll<HTMLInputElement>('input[type="password"]').forEach((input) => {
+            input.value = "";
+          });
+        },
+        onError: (err) => setError(readApiError(err, "Les informations n'ont pas pu être enregistrées.")),
+      },
+    );
+  }
+
   return (
     <Panel title="Mes informations">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <LabeledInput label="Nom complet" defaultValue={user?.name} />
-        <LabeledInput label="Téléphone" defaultValue={user?.phone} hint="Modification confirmée par OTP" />
-        <LabeledInput label="E-mail" defaultValue={user?.email ?? ""} placeholder="vous@email.com" />
-        <LabeledInput label="Mot de passe" type="password" defaultValue="000000" />
-      </div>
-      <p className="label-lux mt-8 text-taupe">Préférences de notification</p>
-      <div className="mt-3 flex flex-wrap gap-2">
-        {(Object.keys(prefs) as (keyof typeof prefs)[]).map((k) => (
-          <button
-            key={k}
-            onClick={() => setPrefs((p) => ({ ...p, [k]: !p[k] }))}
-            className={`border px-4 py-2.5 text-sm transition-colors ${prefs[k] ? "border-gold bg-cream-tint text-ink" : "border-taupe/40 text-taupe"}`}
-          >
-            {prefs[k] ? "✓ " : ""}{k}
-          </button>
-        ))}
-      </div>
-      <button onClick={() => toast("Informations enregistrées")} className="label-lux mt-8 bg-ink px-8 py-3.5 text-cream transition-colors hover:bg-anthracite">Enregistrer</button>
+      <form onSubmit={submit}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <LabeledInput label="Nom complet" name="name" defaultValue={user?.name} required />
+          <LabeledInput
+            label="Téléphone"
+            defaultValue={user?.phone}
+            hint="Identifiant de connexion : contactez-nous pour le modifier."
+            disabled
+          />
+          <LabeledInput
+            label="E-mail"
+            name="email"
+            type="email"
+            defaultValue={user?.email ?? ""}
+            placeholder="vous@email.com"
+            hint="Sert à recevoir la confirmation de commande et la facture."
+          />
+        </div>
+
+        <p className="label-lux mt-8 text-taupe">Changer de mot de passe</p>
+        <div className="mt-3 grid gap-4 sm:grid-cols-2">
+          <LabeledInput label="Mot de passe actuel" name="currentPassword" type="password" autoComplete="current-password" />
+          <LabeledInput
+            label="Nouveau mot de passe"
+            name="newPassword"
+            type="password"
+            autoComplete="new-password"
+            hint="8 caractères minimum. Laissez vide pour ne pas le changer."
+          />
+        </div>
+
+        {error && <p className="mt-4 text-sm text-bordeaux">{error}</p>}
+
+        <button
+          type="submit"
+          disabled={updateProfile.isPending}
+          className="label-lux mt-8 bg-ink px-8 py-3.5 text-cream transition-colors hover:bg-anthracite disabled:opacity-60"
+        >
+          {updateProfile.isPending ? "Enregistrement…" : "Enregistrer"}
+        </button>
+      </form>
     </Panel>
   );
 }
 
 function Addresses() {
   const toast = useToastStore((s) => s.toast);
-  const [list, setList] = useState([
-    { id: 1, label: "Domicile", detail: "Sacré-Cœur 3, villa 4521 · en face de la pharmacie", city: "Dakar", def: true },
-    { id: 2, label: "Bureau", detail: "Plateau, avenue Pasteur, imm. Kébé, 2e étage", city: "Dakar", def: false },
-    { id: 3, label: "Point relais", detail: "Relais HUWSTORE · Marché Sandaga", city: "Dakar", def: false },
-  ]);
-  const setDefault = (id: number) => { setList((l) => l.map((a) => ({ ...a, def: a.id === id }))); toast("Adresse par défaut mise à jour"); };
-  return (
-    <Panel title="Mes adresses" action={<Btn onClick={() => toast("Formulaire d'adresse (démo)")}><Plus /> Ajouter</Btn>}>
-      <div className="grid gap-3 sm:grid-cols-2">
-        {list.map((a) => (
-          <div key={a.id} className={`rounded-xl border p-4 ${a.def ? "border-gold" : "border-taupe/25"}`}>
-            <div className="flex items-center justify-between">
-              <p className="font-medium text-ink">{a.label}</p>
-              {a.def && <span className="label-lux text-[0.55rem] text-gold-deep">Par défaut</span>}
-            </div>
-            <p className="mt-1.5 text-sm text-taupe">{a.detail}</p>
-            <p className="mt-0.5 text-sm text-anthracite">{a.city}</p>
-            <div className="mt-3 flex gap-3 text-xs">
-              {!a.def && <button onClick={() => setDefault(a.id)} className="text-gold-deep hover:underline">Définir par défaut</button>}
-              <button onClick={() => toast("Adresse modifiée")} className="text-anthracite hover:underline">Modifier</button>
-              <button onClick={() => { setList((l) => l.filter((x) => x.id !== a.id)); toast("Adresse supprimée"); }} className="text-bordeaux hover:underline">Supprimer</button>
-            </div>
-          </div>
-        ))}
-      </div>
-    </Panel>
-  );
-}
+  const { data: addresses = [], isLoading } = useAddresses();
+  const createAddress = useCreateAddress();
+  const setDefault = useSetDefaultAddress();
+  const removeAddress = useDeleteAddress();
+  const [formOpen, setFormOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-function Payment() {
-  const toast = useToastStore((s) => s.toast);
-  const [list, setList] = useState([
-    { id: 1, kind: "Wave", num: "•••• •• 90", color: "bg-[#1DC6FF]/15 text-[#0a7fa8]" },
-    { id: 2, kind: "Orange Money", num: "•••• •• 44", color: "bg-[#FF7900]/15 text-[#b85700]" },
-  ]);
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    const data = new FormData(event.currentTarget);
+    const input: AddressInput = {
+      label: String(data.get("label") ?? ""),
+      fullName: String(data.get("fullName") ?? ""),
+      phone: String(data.get("phone") ?? ""),
+      line: String(data.get("line") ?? ""),
+      landmark: String(data.get("landmark") ?? "") || undefined,
+      city: String(data.get("city") ?? ""),
+      country: "Sénégal",
+      isDefault: addresses.length === 0,
+    };
+
+    try {
+      await createAddress.mutateAsync(input);
+      setFormOpen(false);
+      toast("Adresse enregistrée");
+    } catch (err) {
+      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setError(message ?? "L'adresse n'a pas pu être enregistrée.");
+    }
+  }
+
   return (
-    <Panel title="Mes moyens de paiement" action={<Btn onClick={() => toast("Ajout d'un moyen de paiement (démo)")}><Plus /> Ajouter</Btn>}>
+    <Panel
+      title="Mes adresses"
+      action={
+        <Btn onClick={() => setFormOpen((open) => !open)}>
+          {formOpen ? <Close /> : <Plus />} {formOpen ? "Annuler" : "Ajouter"}
+        </Btn>
+      }
+    >
+      {formOpen && (
+        <form onSubmit={submit} className="mb-5 grid gap-3 rounded-xl border border-taupe/25 p-4 sm:grid-cols-2">
+          <LabeledInput label="Nom de l'adresse" name="label" required placeholder="Domicile, Bureau…" />
+          <LabeledInput label="Destinataire" name="fullName" required />
+          <LabeledInput label="Téléphone" name="phone" required placeholder="77 123 45 67" />
+          <LabeledInput label="Ville" name="city" required placeholder="Dakar" />
+          <div className="sm:col-span-2">
+            <LabeledInput label="Adresse" name="line" required placeholder="Quartier, rue, numéro de villa" />
+          </div>
+          <div className="sm:col-span-2">
+            <LabeledInput
+              label="Repère (facultatif)"
+              name="landmark"
+              hint="Un repère fait gagner un appel téléphonique à la livraison."
+              placeholder="En face de la pharmacie, portail bleu…"
+            />
+          </div>
+          {error && <p className="text-sm text-bordeaux sm:col-span-2">{error}</p>}
+          <div className="sm:col-span-2">
+            <button
+              type="submit"
+              disabled={createAddress.isPending}
+              className="label-lux bg-ink px-6 py-3 text-cream transition-colors hover:bg-anthracite disabled:opacity-50"
+            >
+              {createAddress.isPending ? "Enregistrement…" : "Enregistrer l'adresse"}
+            </button>
+          </div>
+        </form>
+      )}
+
+      {isLoading && <p className="text-sm text-taupe">Chargement…</p>}
+      {!isLoading && addresses.length === 0 && !formOpen && (
+        <p className="rounded-xl border border-taupe/25 py-12 text-center text-sm text-taupe">
+          Aucune adresse enregistrée. Ajoutez-en une pour commander plus vite la prochaine fois.
+        </p>
+      )}
+
       <div className="grid gap-3 sm:grid-cols-2">
-        {list.map((m) => (
-          <div key={m.id} className="flex items-center justify-between rounded-xl border border-taupe/25 p-4">
-            <div className="flex items-center gap-3">
-              <span className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${m.color}`}>{m.kind}</span>
-              <span className="text-sm tabular-nums text-anthracite">{m.num}</span>
+        {addresses.map((address) => (
+          <div key={address.id} className={`rounded-xl border p-4 ${address.isDefault ? "border-gold" : "border-taupe/25"}`}>
+            <div className="flex items-center justify-between">
+              <p className="font-medium text-ink">{address.label}</p>
+              {address.isDefault && <span className="label-lux text-[0.55rem] text-gold-deep">Par défaut</span>}
             </div>
-            <button onClick={() => { setList((l) => l.filter((x) => x.id !== m.id)); toast("Moyen de paiement supprimé"); }} className="text-xs text-bordeaux hover:underline">Supprimer</button>
+            <p className="mt-1.5 text-sm text-taupe">{address.line}</p>
+            {address.landmark && <p className="text-sm italic text-taupe">{address.landmark}</p>}
+            <p className="mt-0.5 text-sm text-anthracite">{address.city}</p>
+            <p className="mt-0.5 text-xs text-taupe">{address.fullName} - {address.phone}</p>
+            <div className="mt-3 flex gap-3 text-xs">
+              {!address.isDefault && (
+                <button
+                  onClick={() => setDefault.mutate(address.id, { onSuccess: () => toast("Adresse par défaut mise à jour") })}
+                  className="text-gold-deep hover:underline"
+                >
+                  Définir par défaut
+                </button>
+              )}
+              <button
+                onClick={() => removeAddress.mutate(address.id, { onSuccess: () => toast("Adresse supprimée") })}
+                className="text-bordeaux hover:underline"
+              >
+                Supprimer
+              </button>
+            </div>
           </div>
         ))}
       </div>
-      <p className="mt-4 flex items-center gap-1.5 text-xs text-taupe"><Lock className="text-sm text-bottle" /> Numéros partiellement masqués pour votre sécurité.</p>
     </Panel>
   );
 }
 
 function Wishlist() {
-  const wishlist = useCartStore((s) => s.wishlist);
+  const { ids } = useWishlist();
   const navigate = useNavigate();
   const { data: products = [] } = useProducts();
-  const items = products.filter((p) => wishlist.includes(p.id));
+  const items = products.filter((p) => ids.includes(p.id));
   return (
     <Panel title={`Mes favoris (${items.length})`}>
       {items.length === 0 ? (
@@ -346,57 +526,30 @@ function Wishlist() {
   );
 }
 
-function Reviews() {
-  const toast = useToastStore((s) => s.toast);
-  const { data: products = [] } = useProducts();
-  return (
-    <Panel title="Mes avis">
-      {products[2] && (
-        <div className="rounded-xl border border-taupe/25 p-4">
-          <p className="label-lux text-gold-deep">En attente d'avis</p>
-          <div className="mt-3 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <img src={products[2].image} alt="" className="h-14 w-11 rounded object-cover" />
-              <div><p className="font-medium">{products[2].name}</p><p className="text-xs text-taupe">Livrée récemment</p></div>
-            </div>
-            <Btn onClick={() => toast("Merci pour votre avis !")}>Laisser un avis</Btn>
-          </div>
-        </div>
-      )}
-      <div className="mt-3 rounded-xl border border-taupe/25 p-4">
-        <div className="flex items-center gap-2">
-          <span className="inline-flex text-gold">{[1, 2, 3, 4, 5].map((i) => <Star key={i} filled />)}</span>
-          <span className="text-sm font-medium">Besace Camille</span>
-        </div>
-        <p className="mt-2 text-sm text-anthracite">« Parfaite au quotidien, le cuir vieillit très bien. »</p>
-        <p className="mt-1 text-xs text-taupe">Publié le 28 juillet</p>
-      </div>
-    </Panel>
-  );
-}
-
 function Support() {
+  const shop = useShop();
+
   return (
     <Panel title="Support & SAV">
       <div className="rounded-2xl bg-[#128C4B] p-6 text-cream">
         <p className="serif text-xl">Une question ? Écrivez-nous sur WhatsApp</p>
-        <p className="mt-1 text-sm text-cream/80">Réponse en quelques minutes · du lundi au samedi.</p>
-        <a href={`https://wa.me/${SHOP_PHONE_WA}`} target="_blank" rel="noopener noreferrer" className="label-lux mt-4 inline-flex items-center gap-2 bg-cream px-6 py-3 text-[#128C4B]">
-          <Chat /> Contacter via WhatsApp
-        </a>
+        <p className="mt-1 text-sm text-cream/80">Réponse en quelques minutes - du lundi au samedi.</p>
+        {shop.whatsapp && (
+          <a href={`https://wa.me/${shop.whatsapp}`} target="_blank" rel="noopener noreferrer" className="label-lux mt-4 inline-flex items-center gap-2 bg-cream px-6 py-3 text-[#128C4B]">
+            <Chat /> Contacter via WhatsApp
+          </a>
+        )}
       </div>
       <p className="label-lux mt-8 text-taupe">Questions fréquentes</p>
       <div className="mt-3 space-y-2">
         {[
-          ["Quels sont les délais de livraison ?", "24–48 h à Dakar, 2–6 jours pour les autres villes selon la zone."],
-          ["Puis-je payer à la livraison ?", "Oui, ainsi que par Wave et Orange Money."],
-          ["Comment retourner un article ?", "Sous 14 jours, depuis Mes commandes → Retour / échange."],
+          ["Quels sont les délais de livraison ?", "24 h sur Dakar, 72 h en région selon la zone choisie."],
+          ["Comment se passe le paiement ?", "En espèces, à la remise du colis. Aucun paiement en ligne n'est demandé."],
+          [
+            "Puis-je retourner un article ?",
+            "Les retours et les échanges ne sont pas acceptés. Vérifiez votre article devant la personne qui vous le remet : un article endommagé ou non conforme est repris s'il est signalé immédiatement.",
+          ],
         ].map(([q, a]) => <Faq key={q} q={q} a={a} />)}
-      </div>
-      <p className="label-lux mt-8 text-taupe">Historique des échanges</p>
-      <div className="mt-3 rounded-xl border border-taupe/25 p-4 text-sm">
-        <div className="flex justify-between"><span className="font-medium">Ticket #4821 - Suivi livraison</span><span className="text-bottle">Résolu</span></div>
-        <p className="mt-1 text-taupe">Ouvert le 20 août · dernière réponse il y a 2 jours</p>
       </div>
     </Panel>
   );
@@ -415,6 +568,15 @@ function Faq({ q, a }: { q: string; a: string }) {
 }
 
 // - petits helpers -
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="label-lux text-gold">{label}</p>
+      <p className="serif mt-1.5 text-xl">{value}</p>
+    </div>
+  );
+}
+
 function Btn({ children, onClick, ghost }: { children: React.ReactNode; onClick?: () => void; ghost?: boolean }) {
   return (
     <button

@@ -1,12 +1,16 @@
-import { useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useCategories } from "../hooks/useCategories";
-import { useProductFacets, useProducts } from "../hooks/useProducts";
+import { useProductFacets, useProductPage } from "../hooks/useProducts";
 import { fcfa } from "../data";
 import { ProductCard } from "../components/Shared";
-import { ChevronDown, Close, Plus, Minus, Menu } from "../components/icons";
+import { ChevronDown, Close, Plus, Minus, Menu, Search as SearchIcon } from "../components/icons";
+import { useSeo } from "../hooks/useSeo";
+import { useDebouncedValue } from "../hooks/useDebouncedValue";
 
-type Sort = "featured" | "price-asc" | "price-desc" | "new";
+type Sort = "featured" | "best" | "price-asc" | "price-desc" | "new";
+const SORTS: Sort[] = ["featured", "best", "new", "price-asc", "price-desc"];
+const isSort = (value: string | null): value is Sort => SORTS.includes(value as Sort);
 
 function FilterGroup({ title, children, open: init = true }: { title: string; children: React.ReactNode; open?: boolean }) {
   const [open, setOpen] = useState(init);
@@ -24,23 +28,117 @@ function FilterGroup({ title, children, open: init = true }: { title: string; ch
 export default function Listing() {
   const navigate = useNavigate();
   const { category } = useParams<{ category?: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { data: categories = [] } = useCategories();
-  const { data: allProducts = [] } = useProducts({ limit: 100 });
   const { data: facets } = useProductFacets();
 
   const [cats, setCats] = useState<string[]>(category ? [category] : []);
   const [mats, setMats] = useState<string[]>([]);
   const [cols, setCols] = useState<string[]>([]);
-  const priceBounds = useMemo(() => {
-    if (allProducts.length === 0) return { min: 0, max: 0 };
-    const prices = allProducts.map((p) => p.price);
-    return { min: Math.min(...prices), max: Math.max(...prices) };
-  }, [allProducts]);
   // null = aucun plafond choisi : on affiche tout le catalogue.
   const [maxPrice, setMaxPrice] = useState<number | null>(null);
-  const priceCap = maxPrice ?? priceBounds.max;
-  const [sort, setSort] = useState<Sort>("featured");
+  const [sort, setSort] = useState<Sort>(() => {
+    const fromUrl = searchParams.get("sort");
+    return isSort(fromUrl) ? fromUrl : "featured";
+  });
+  const [page, setPage] = useState(1);
   const [filtersOpen, setFiltersOpen] = useState(false);
+
+  /**
+   * Recherche. Le terme vit dans l'URL (?q=), pour trois raisons : la barre de
+   * l'accueil arrive ici avec sa question, un resultat de recherche se partage
+   * par lien, et le bouton « retour » du navigateur retrouve la liste
+   * precedente. Le champ reste local et n'interroge l'API qu'apres la frappe.
+   */
+  const [search, setSearch] = useState(searchParams.get("q") ?? "");
+  const debouncedSearch = useDebouncedValue(search.trim(), 350);
+
+  // L'URL suit la recherche debouncee, jamais chaque touche : sinon
+  // l'historique du navigateur se remplirait d'une entree par caractere.
+  useEffect(() => {
+    const current = searchParams.get("q") ?? "";
+    if (current === debouncedSearch) return;
+    const next = new URLSearchParams(searchParams);
+    if (debouncedSearch) next.set("q", debouncedSearch);
+    else next.delete("q");
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch]);
+
+  // Retour arriere ou lien externe : l'URL fait foi, le champ s'y aligne.
+  useEffect(() => {
+    const fromUrl = searchParams.get("q") ?? "";
+    setSearch((current) => (current.trim() === fromUrl ? current : fromUrl));
+  }, [searchParams]);
+
+  // Le tri suit la même logique que la recherche : il vit dans l'URL (?sort=),
+  // pour qu'un lien « Meilleures ventes » partagé depuis l'accueil ouvre la
+  // boutique déjà triée.
+  useEffect(() => {
+    const current = searchParams.get("sort") ?? "featured";
+    if (current === sort) return;
+    const next = new URLSearchParams(searchParams);
+    if (sort !== "featured") next.set("sort", sort);
+    else next.delete("sort");
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sort]);
+
+  useEffect(() => {
+    const fromUrl = searchParams.get("sort");
+    const next = isSort(fromUrl) ? fromUrl : "featured";
+    setSort((current) => (current === next ? current : next));
+  }, [searchParams]);
+
+  // La catégorie vient du chemin (/boutique/:category), pas de l'état local :
+  // React Router ne démonte pas ce composant quand on passe d'une catégorie à
+  // une autre (même route), donc sans cet effet les coches restaient bloquées
+  // sur la première catégorie visitée.
+  useEffect(() => {
+    setCats(category ? [category] : []);
+  }, [category]);
+
+  // Bornes de prix : elles viennent des facettes, calculées en base. Sans
+  // elles, le curseur mentirait dès qu'un tarif change.
+  const priceBounds = { min: facets?.priceMin ?? 0, max: facets?.priceMax ?? 0 };
+  const priceCap = maxPrice ?? priceBounds.max;
+
+  /**
+   * Filtrage, tri et pagination sont faits PAR LE SERVEUR.
+   *
+   * Le catalogue peut passer de 30 à 150 modèles (recueil de besoins, Q13) :
+   * tout charger pour filtrer en mémoire fonctionnerait à la démo et
+   * s'effondrerait en 3G. La requête est mise en cache par TanStack Query, donc
+   * revenir à un filtre déjà vu est instantané.
+   */
+  const { data: pageData, isLoading, isFetching } = useProductPage({
+    ...(cats.length > 0 ? { category: cats } : {}),
+    ...(mats.length > 0 ? { material: mats } : {}),
+    ...(cols.length > 0 ? { color: cols } : {}),
+    ...(maxPrice !== null ? { maxPrice } : {}),
+    ...(debouncedSearch ? { search: debouncedSearch } : {}),
+    sort,
+    page,
+    limit: 10,
+  });
+
+  const products = pageData?.items ?? [];
+  const meta = pageData?.meta;
+
+  // Tout changement de filtre ramène à la première page : rester page 3 après
+  // avoir coché une matière afficherait une page vide sans explication.
+  useEffect(() => {
+    setPage(1);
+  }, [cats, mats, cols, maxPrice, sort, debouncedSearch]);
+
+  useSeo({
+    title: debouncedSearch ? `Recherche : ${debouncedSearch}` : category ? `Boutique - ${category}` : "Boutique",
+    // Une page de resultats de recherche n'a rien a faire dans un index :
+    // elle produirait autant d'URL que de requetes possibles (rules/SEO.md).
+    noindex: Boolean(debouncedSearch),
+    description:
+      "Toutes nos pièces : sacs, tote bags et accessoires. Livraison partout au Sénégal, paiement à la livraison.",
+  });
 
   const toggle = (arr: string[], set: (v: string[]) => void, v: string) =>
     set(arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
@@ -50,20 +148,6 @@ export default function Listing() {
     ...mats.map((v) => ({ v, clear: () => setMats(mats.filter((x) => x !== v)) })),
     ...cols.map((v) => ({ v, clear: () => setCols(cols.filter((x) => x !== v)) })),
   ];
-
-  const filtered = useMemo(() => {
-    let r = allProducts.filter(
-      (p) =>
-        (cats.length === 0 || cats.includes(p.category)) &&
-        (mats.length === 0 || mats.includes(p.material)) &&
-        (cols.length === 0 || p.variants.some((v) => cols.includes(v.color))) &&
-        p.price <= priceCap,
-    );
-    if (sort === "price-asc") r = [...r].sort((a, b) => a.price - b.price);
-    if (sort === "price-desc") r = [...r].sort((a, b) => b.price - a.price);
-    if (sort === "new") r = [...r].sort((a, b) => (b.badge === "Nouveau" ? 1 : 0) - (a.badge === "Nouveau" ? 1 : 0));
-    return r;
-  }, [allProducts, cats, mats, cols, priceCap, sort]);
 
   const check = (label: string, arr: string[], set: (v: string[]) => void, count?: number) => (
     <label key={label} className="flex cursor-pointer items-center gap-2.5 text-sm text-anthracite">
@@ -135,7 +219,7 @@ export default function Listing() {
       {/* Bandeau catégorie */}
       <div className="mt-6 flex flex-col items-center justify-center bg-cream-tint px-6 py-10 text-center md:py-14">
         <p className="label-lux text-gold-deep">Maroquinerie</p>
-        <h1 className="serif mt-3 text-[2rem] leading-tight sm:text-4xl md:text-5xl">{category ?? "Toute la collection"}</h1>
+        <h1 className="serif mt-3 text-[1.6rem] leading-tight sm:text-3xl md:text-4xl">{category ?? "Toute la collection"}</h1>
         <p className="mt-3 max-w-lg text-sm text-taupe">
           Des pièces façonnées à la main, sélectionnées pour leur matière et leur ligne.
         </p>
@@ -145,10 +229,39 @@ export default function Listing() {
         <aside className="hidden lg:block">{sidebar}</aside>
 
         <div>
+          {/* Recherche */}
+          <div className="mb-4 flex items-center gap-3 border border-taupe/35 px-4 focus-within:border-gold">
+            <SearchIcon className="shrink-0 text-lg text-taupe" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Rechercher un sac, une matiere, un coloris…"
+              aria-label="Rechercher dans la boutique"
+              className="flex-1 bg-transparent py-3 text-sm outline-none placeholder:text-taupe/70"
+            />
+            {search && (
+              <button
+                onClick={() => setSearch("")}
+                aria-label="Effacer la recherche"
+                className="shrink-0 text-taupe transition-colors hover:text-ink"
+              >
+                <Close />
+              </button>
+            )}
+          </div>
+
           {/* Barre de tri */}
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-taupe/25 pb-4">
-            <p className="text-xs text-taupe sm:text-sm">
-              <span className="text-ink">{filtered.length}</span> sur {allProducts.length} résultats
+            <p className="text-xs text-taupe sm:text-sm" aria-live="polite">
+              {isLoading ? (
+                "Chargement…"
+              ) : (
+                <>
+                  <span className="text-ink">{meta?.total ?? 0}</span>{" "}
+                  {meta?.total === 1 ? "pièce" : "pièces"}
+                  {meta && meta.totalPages > 1 ? ` - page ${meta.page} sur ${meta.totalPages}` : ""}
+                </>
+              )}
             </p>
             <div className="flex items-center gap-3">
             <button
@@ -164,6 +277,7 @@ export default function Listing() {
                 className="label-lux appearance-none border border-taupe/40 bg-transparent py-2.5 pl-4 pr-9 text-ink outline-none focus:border-gold"
               >
                 <option value="featured">Mise en avant</option>
+                <option value="best">Meilleures ventes</option>
                 <option value="new">Nouveautés</option>
                 <option value="price-asc">Prix croissant</option>
                 <option value="price-desc">Prix décroissant</option>
@@ -191,30 +305,53 @@ export default function Listing() {
           )}
 
           {/* Grille */}
-          {filtered.length > 0 ? (
-            <div className="mt-6 grid grid-cols-2 gap-x-3 gap-y-8 sm:mt-8 sm:gap-x-4 sm:gap-y-10 md:grid-cols-3">
-              {filtered.map((p) => <ProductCard key={p.id} p={p} />)}
+          {products.length > 0 ? (
+            <div
+              className={`mt-6 grid grid-cols-2 gap-x-3 gap-y-8 transition-opacity sm:mt-8 sm:gap-x-4 sm:gap-y-10 md:grid-cols-3 lg:grid-cols-4 ${
+                isFetching ? "opacity-60" : ""
+              }`}
+            >
+              {products.map((p) => <ProductCard key={p.id} p={p} />)}
             </div>
           ) : (
-            <div className="mt-16 text-center">
-              <p className="serif text-2xl text-anthracite">Aucune pièce ne correspond</p>
-              <p className="mt-2 text-sm text-taupe">Ajustez vos filtres pour élargir la sélection.</p>
-            </div>
+            !isLoading && (
+              <div className="mt-16 text-center">
+                <p className="serif text-2xl text-anthracite">Aucune pièce ne correspond</p>
+                <p className="mt-2 text-sm text-taupe">Ajustez vos filtres pour élargir la sélection.</p>
+              </div>
+            )
           )}
 
           {/* Pagination */}
-          {filtered.length > 0 && (
-            <div className="mt-16 flex items-center justify-center gap-2">
-              {["1", "2", "3"].map((n, i) => (
+          {meta && meta.totalPages > 1 && (
+            <nav aria-label="Pagination" className="mt-16 flex flex-wrap items-center justify-center gap-2">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={!meta.hasPrev}
+                className="h-10 border border-taupe/40 px-4 text-sm text-anthracite transition-colors hover:border-gold disabled:opacity-40"
+              >
+                Précédent
+              </button>
+              {Array.from({ length: meta.totalPages }, (_, i) => i + 1).map((n) => (
                 <button
                   key={n}
-                  className={`h-10 w-10 text-sm transition-colors ${i === 0 ? "bg-ink text-cream" : "border border-taupe/40 text-anthracite hover:border-gold"}`}
+                  onClick={() => setPage(n)}
+                  aria-current={n === meta.page ? "page" : undefined}
+                  className={`h-10 w-10 text-sm transition-colors ${
+                    n === meta.page ? "bg-ink text-cream" : "border border-taupe/40 text-anthracite hover:border-gold"
+                  }`}
                 >
                   {n}
                 </button>
               ))}
-              <button className="h-10 border border-taupe/40 px-4 text-sm text-anthracite transition-colors hover:border-gold">Suivant</button>
-            </div>
+              <button
+                onClick={() => setPage((p) => p + 1)}
+                disabled={!meta.hasNext}
+                className="h-10 border border-taupe/40 px-4 text-sm text-anthracite transition-colors hover:border-gold disabled:opacity-40"
+              >
+                Suivant
+              </button>
+            </nav>
           )}
         </div>
       </div>
@@ -240,7 +377,7 @@ export default function Listing() {
                 onClick={() => setFiltersOpen(false)}
                 className="label-lux bg-ink py-3 text-cream transition-colors hover:bg-anthracite"
               >
-                Voir {filtered.length} pièces
+                Voir {meta?.total ?? 0} pièces
               </button>
             </div>
           </div>

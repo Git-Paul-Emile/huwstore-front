@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createOrder,
   getMyOrders,
+  getOrder,
   getOrders,
   updateOrder,
   type OrderFilters,
@@ -20,6 +21,14 @@ export const useOrderPage = (filters: OrderFilters = {}) =>
 export const useOrders = (filters: OrderFilters = {}) =>
   useQuery({ queryKey: ["orders", filters], queryFn: () => getOrders(filters), select: (page) => page.items ?? EMPTY });
 
+/**
+ * Une commande précise. `token` n'est fourni que pour une commande passée sans
+ * compte : il fait partie de la clé de cache, sinon deux lectures différentes
+ * du même identifiant se partageraient une réponse.
+ */
+export const useOrder = (id: string, token?: string) =>
+  useQuery({ queryKey: ["order", id, token ?? null], queryFn: () => getOrder(id, token), enabled: Boolean(id) });
+
 export const useMyOrders = () => useQuery({ queryKey: ["orders", "mine"], queryFn: getMyOrders });
 
 export function useCreateOrder() {
@@ -31,6 +40,7 @@ export function useCreateOrder() {
       // Une vente décrémente le stock : les produits et le stock sont périmés.
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["stock"] });
+      queryClient.invalidateQueries({ queryKey: ["stats"] });
     },
   });
 }

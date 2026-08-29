@@ -4,6 +4,7 @@ import { useCategories } from "../../hooks/useCategories";
 import { useCreateProduct, useDeleteProduct, useProducts, useUpdateProduct } from "../../hooks/useProducts";
 import type { Product } from "../../data";
 import type { ProductInput, ProductUpdateInput, VariantInput } from "../../api/products";
+import GalleryField from "../../components/admin/GalleryField";
 import { Plus, Edit, Copy, Archive, Search, Filter } from "../../components/icons";
 
 export default function Products() {
@@ -75,6 +76,7 @@ export default function Products() {
         handleDropMm: p.specs.handleDropMm,
         weightGrams: p.specs.weightGrams,
         features: p.specs.features,
+        includedAccessory: p.includedAccessory,
         active: false,
         // Le SKU est omis : le back en génère un nouveau, unique par produit.
         variants: p.variants.map((v) => ({
@@ -273,6 +275,7 @@ function ProductForm({
   const [capacity, setCapacity] = useState(product?.specs.capacity ?? "");
   const [weight, setWeight] = useState(String(product?.specs.weightGrams ?? ""));
   const [features, setFeatures] = useState((product?.specs.features ?? []).join("\n"));
+  const [includedAccessory, setIncludedAccessory] = useState(product?.includedAccessory ?? "");
   const [dimensions, setDimensions] = useState<Record<DimensionKey, string>>(() =>
     Object.fromEntries(DIMENSION_FIELDS.map((f) => [f.key, toCm(product?.specs[f.key])])) as Record<DimensionKey, string>,
   );
@@ -316,6 +319,7 @@ function ProductForm({
     compareAt: compareAt === "" ? undefined : compareNumber,
     closure: closure.trim() || undefined,
     capacity: capacity.trim() || undefined,
+    includedAccessory: includedAccessory.trim() || undefined,
     weightGrams: weight === "" ? undefined : Number(weight),
     features: features
       .split("\n")
@@ -432,6 +436,15 @@ function ProductForm({
           <span style={labelStyle}>Capacité</span>
           <Input value={capacity} onChange={(e) => setCapacity(e.target.value)} className="mt-1.5" placeholder="Peut contenir un ordinateur" />
         </label>
+        <label className="block text-sm md:col-span-2">
+          <span style={labelStyle}>Accessoire inclus (facultatif)</span>
+          <Input
+            value={includedAccessory}
+            onChange={(e) => setIncludedAccessory(e.target.value)}
+            className="mt-1.5"
+            placeholder="Livré avec une pochette assortie"
+          />
+        </label>
 
         {DIMENSION_FIELDS.map((field) => (
           <label key={field.key} className="block text-sm">
@@ -448,7 +461,7 @@ function ProductForm({
         ))}
 
         <label className="block text-sm md:col-span-2">
-          <span style={labelStyle}>Points forts — une ligne par élément</span>
+          <span style={labelStyle}>Points forts - une ligne par élément</span>
           <textarea
             value={features}
             onChange={(e) => setFeatures(e.target.value)}
@@ -477,7 +490,7 @@ function ProductForm({
                       background: v.hexSecondary ? `linear-gradient(135deg, ${v.hex} 50%, ${v.hexSecondary} 50%)` : v.hex,
                     }}
                   />
-                  {v.color} · {v.stock.qty} en stock
+                  {v.color} - {v.stock.qty} en stock
                 </span>
               ))}
             </div>
@@ -545,17 +558,14 @@ function ProductForm({
                     className="mt-1.5 w-24"
                   />
                 </label>
-                <label className="block text-sm md:col-span-5">
-                  <span style={labelStyle}>Images — une URL par ligne</span>
-                  <textarea
-                    value={variant.images.join("\n")}
-                    onChange={(e) => setVariant(index, { images: e.target.value.split("\n").map((l) => l.trim()).filter(Boolean) })}
-                    rows={2}
-                    className="mt-1.5 w-full rounded-lg border px-3 py-2 text-sm outline-none"
-                    style={{ borderColor: "var(--adm-border)", background: "var(--adm-surface)", color: "var(--adm-text)" }}
-                    placeholder="/products/mon-produit/noir-1.jpg"
+                <div className="md:col-span-5">
+                  <GalleryField
+                    images={variant.images}
+                    onChange={(images) => setVariant(index, { images })}
+                    folder="produits"
+                    label={`Photos du coloris ${variant.color || index + 1}`}
                   />
-                </label>
+                </div>
                 {variants.length > 1 && (
                   <div className="md:col-span-5">
                     <Btn variant="ghost" onClick={() => setVariants((list) => list.filter((_, i) => i !== index))}>

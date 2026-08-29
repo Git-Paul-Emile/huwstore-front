@@ -13,3 +13,7 @@ export type Client = {
 };
 
 export const getClients = () => unwrap<Client[]>(api.get("/clients"));
+
+/** Export CSV du fichier clientes : le serveur renvoie un fichier, pas du JSON. */
+export const exportClientsCsv = () =>
+  api.get("/clients/export", { responseType: "blob" }).then((res) => res.data as Blob);

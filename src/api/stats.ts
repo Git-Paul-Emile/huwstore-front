@@ -9,3 +9,17 @@ export const getDashboardStats = () => unwrap<DashboardStats>(api.get("/stats/da
 export const getSales7Days = () => unwrap<SalesPoint[]>(api.get("/stats/sales-7-days"));
 
 export const getSalesByCategory = () => unwrap<CategorySales[]>(api.get("/stats/sales-by-category"));
+
+/** Meilleures ventes, classées par quantité réellement vendue (recueil Q70). */
+export type TopProduct = {
+  id: string;
+  slug: string;
+  name: string;
+  category: string;
+  image: string | null;
+  qtySold: number;
+  revenue: number;
+};
+
+export const getTopProducts = (params: { days?: number; limit?: number } = {}) =>
+  unwrap<TopProduct[]>(api.get("/stats/top-products", { params }));

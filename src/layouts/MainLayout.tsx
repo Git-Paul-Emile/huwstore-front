@@ -3,10 +3,15 @@ import Header from "../components/Header";
 import Footer from "../components/Footer";
 import CartDrawer from "../components/CartDrawer";
 import WhatsAppWidget from "../components/WhatsAppWidget";
+import ScrollTopButton from "../components/ScrollTopButton";
 import AuthModal from "../components/AuthModal";
 import Toasts from "../components/Toasts";
+import { useWishlistSync } from "../hooks/useWishlist";
 
 export default function MainLayout() {
+  // Verse les favoris pris avant connexion dans le compte, une fois connectee.
+  useWishlistSync();
+
   return (
     <div className="flex min-h-screen flex-col bg-cream">
       <Header />
@@ -16,6 +21,7 @@ export default function MainLayout() {
       <Footer />
       <CartDrawer />
       <WhatsAppWidget />
+      <ScrollTopButton />
       <AuthModal />
       <Toasts />
     </div>

@@ -1,3 +1,5 @@
+import { FaWhatsapp } from "react-icons/fa";
+
 type P = { className?: string; strokeWidth?: number };
 const base = (p: P) => ({
   className: p.className,
@@ -17,6 +19,16 @@ export const Search = (p: P) => (
 export const User = (p: P) => (
   <svg {...base(p)}><circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.5-6 8-6s8 2 8 6" /></svg>
 );
+export const Eye = (p: P) => (
+  <svg {...base(p)}><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></svg>
+);
+export const EyeOff = (p: P) => (
+  <svg {...base(p)}>
+    <path d="M9.9 4.24A9.6 9.6 0 0 1 12 4c6.4 0 10 7 10 7a15.6 15.6 0 0 1-2.16 3.19" />
+    <path d="M6.5 6.61C3.4 8.5 2 11 2 11s3.6 7 10 7c1.35 0 2.55-.31 3.6-.78" />
+    <path d="M9.9 14.1a3 3 0 0 0 4.24-4.24" />
+    <path d="M2 2l20 20" /></svg>
+);
 export const Heart = ({ filled, ...p }: P & { filled?: boolean }) => (
   <svg {...base(p)} fill={filled ? "currentColor" : "none"}>
     <path d="M12 20s-7-4.35-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.65-7 10-7 10Z" />
@@ -32,6 +44,7 @@ export const Plus = (p: P) => (<svg {...base(p)}><path d="M12 5v14M5 12h14" /></
 export const Minus = (p: P) => (<svg {...base(p)}><path d="M5 12h14" /></svg>);
 export const ArrowRight = (p: P) => (<svg {...base(p)}><path d="M5 12h14M13 6l6 6-6 6" /></svg>);
 export const ChevronDown = (p: P) => (<svg {...base(p)}><path d="m6 9 6 6 6-6" /></svg>);
+export const ArrowUp = (p: P) => (<svg {...base(p)}><path d="M12 19V5M6 11l6-6 6 6" /></svg>);
 export const Menu = (p: P) => (<svg {...base(p)}><path d="M4 7h16M4 12h16M4 17h16" /></svg>);
 export const Truck = (p: P) => (
   <svg {...base(p)}><path d="M3 7h11v8H3zM14 10h4l3 3v2h-7z" /><circle cx="7" cy="17" r="1.6" /><circle cx="17" cy="17" r="1.6" /></svg>
@@ -131,8 +144,10 @@ export const LogOut = (p: P) => (
 export const Phone = (p: P) => (
   <svg {...base(p)}><path d="M5 4h3l2 5-2 1.5a11 11 0 0 0 5 5L16 13l5 2v3a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2Z" /></svg>
 );
-export const WhatsApp = (p: P) => (
-  <svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" className={p.className}>
-    <path d="M12 2C6.477 2 2 6.477 2 12c0 1.887.525 3.65 1.438 5.152L2 22l4.98-1.393A9.953 9.953 0 0 0 12 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm5.472 12.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
-  </svg>
-);
+/**
+ * Seule icône de marque du fichier : ni les tracés maison ci-dessus ni
+ * lucide-react n'incluent de logos - lucide est un jeu d'icônes d'interface,
+ * pas un pack de marques. Le vrai logo WhatsApp vient donc de react-icons
+ * (Font Awesome).
+ */
+export const WhatsApp = (p: P) => <FaWhatsapp className={p.className} />;

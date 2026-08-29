@@ -2,9 +2,9 @@ import { useState } from "react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useToastStore } from "../store/useToastStore";
 import { useLogin, useRegister } from "../hooks/useAuth";
-import { Close, Lock, Phone, ArrowRight, Check } from "./icons";
+import { Close, Lock, ArrowRight, Check, Eye, EyeOff } from "./icons";
 
-type Mode = "login" | "register" | "forgot" | "otp";
+type Mode = "login" | "register" | "forgot";
 
 export default function AuthModal() {
   const authOpen = useAuthStore((s) => s.authOpen);
@@ -43,7 +43,6 @@ export default function AuthModal() {
     login: "Connexion",
     register: "Créer un compte",
     forgot: "Mot de passe oublié",
-    otp: "Vérification",
   }[mode];
 
   return (
@@ -63,7 +62,7 @@ export default function AuthModal() {
                 <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+221 77 123 45 67" className={inputCls} />
               </Field>
               <Field label="Mot de passe">
-                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className={inputCls} />
+                <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
               </Field>
               <div className="flex items-center justify-between text-xs">
                 <label className="flex items-center gap-2 text-anthracite">
@@ -80,15 +79,6 @@ export default function AuthModal() {
                 <span className="label-lux">{loginMutation.isPending ? "Connexion…" : "Se connecter"}</span>
                 <ArrowRight className="text-base" />
               </button>
-
-              <Divider />
-              <button onClick={() => toast("Connexion par code - bientôt disponible.")} className={ghostCls}>
-                <Phone className="text-base" /> Connexion par code SMS / WhatsApp
-              </button>
-              <div className="grid grid-cols-2 gap-3">
-                <button onClick={() => toast("Connexion Google - bientôt disponible.")} className={socialCls}>Google</button>
-                <button onClick={() => toast("Connexion Facebook - bientôt disponible.")} className={socialCls}>Facebook</button>
-              </div>
 
               <p className="text-center text-sm text-taupe">
                 Nouveau client ?{" "}
@@ -108,7 +98,7 @@ export default function AuthModal() {
                 <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+221 77 123 45 67" className={inputCls} />
               </Field>
               <Field label="Mot de passe">
-                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className={inputCls} />
+                <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
               </Field>
               <label className="flex items-start gap-2.5 text-xs text-anthracite">
                 <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 accent-gold" />
@@ -144,7 +134,7 @@ export default function AuthModal() {
               {forgotStep === 2 && (
                 <>
                   <Field label="Nouveau mot de passe">
-                    <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className={inputCls} />
+                    <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
                   </Field>
                   <button disabled={password.length < 4} onClick={() => setForgotStep(3)} className={`${ctaCls} disabled:bg-taupe-soft disabled:text-taupe`}><span className="label-lux">Valider</span></button>
                 </>
@@ -163,15 +153,10 @@ export default function AuthModal() {
           )}
         </div>
 
-        {/* Checkout invité + sécurité */}
+        {/* Sécurité */}
         <div className="border-t border-taupe/25 px-6 py-4">
-          {mode !== "forgot" && (
-            <button onClick={close} className="mb-3 block w-full text-center text-sm text-anthracite hover:text-gold-deep">
-              Commander sans créer de compte →
-            </button>
-          )}
           <p className="flex items-center justify-center gap-1.5 text-[0.7rem] text-taupe">
-            <Lock className="text-sm text-bottle" /> Connexion sécurisée · vos données sont protégées
+            <Lock className="text-sm text-bottle" /> Connexion sécurisée - vos données sont protégées
           </p>
         </div>
       </aside>
@@ -181,8 +166,6 @@ export default function AuthModal() {
 
 const inputCls = "w-full border border-taupe/45 bg-cream px-4 py-3 text-sm outline-none transition-colors placeholder:text-taupe focus:border-gold";
 const ctaCls = "flex w-full items-center justify-center gap-2 bg-ink py-4 text-cream transition-colors hover:bg-anthracite active:scale-[0.99]";
-const ghostCls = "flex w-full items-center justify-center gap-2 border border-ink py-3.5 text-sm text-ink transition-colors hover:bg-ink hover:text-cream";
-const socialCls = "border border-taupe/45 py-3 text-sm text-anthracite transition-colors hover:border-gold hover:text-gold-deep";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -193,10 +176,39 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function Divider() {
+/**
+ * Champ mot de passe avec bouton afficher/masquer : une faute de frappe sur un
+ * clavier tactile est difficile à repérer derrière des points, et se voit
+ * immédiatement en clair - la cliente corrige avant de valider plutôt qu'après
+ * un échec de connexion.
+ */
+function PasswordInput({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string;
+  onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  placeholder?: string;
+}) {
+  const [visible, setVisible] = useState(false);
   return (
-    <div className="flex items-center gap-3 text-[0.65rem] text-taupe">
-      <span className="h-px flex-1 bg-taupe/30" /> OU <span className="h-px flex-1 bg-taupe/30" />
+    <div className="relative">
+      <input
+        type={visible ? "text" : "password"}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        className={`${inputCls} pr-11`}
+      />
+      <button
+        type="button"
+        onClick={() => setVisible((v) => !v)}
+        aria-label={visible ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-taupe transition-colors hover:text-ink"
+      >
+        {visible ? <EyeOff /> : <Eye />}
+      </button>
     </div>
   );
 }

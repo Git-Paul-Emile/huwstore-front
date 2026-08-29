@@ -2,9 +2,11 @@ import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useProduct, useProducts } from "../hooks/useProducts";
 import { useCartStore } from "../store/useCartStore";
+import { useWishlist } from "../hooks/useWishlist";
+import { useSeo } from "../hooks/useSeo";
 import { cm, dimensionLabels, fcfa, grams, type ProductVariant } from "../data";
-import { Stars, ProductCard } from "../components/Shared";
-import { Heart, Bag, Truck, Rotate, Plus, Minus, ChevronDown } from "../components/icons";
+import { ProductCard } from "../components/Shared";
+import { Heart, Bag, Truck, Shield, Plus, Minus, ChevronDown } from "../components/icons";
 
 function Accordion({ title, children, open: initial = false }: { title: string; children: React.ReactNode; open?: boolean }) {
   const [open, setOpen] = useState(initial);
@@ -21,12 +23,12 @@ function Accordion({ title, children, open: initial = false }: { title: string; 
   );
 }
 
-/** Pastille de couleur — dégradé à deux teintes pour les modèles bi-matière. */
+/** Pastille de couleur - dégradé à deux teintes pour les modèles bi-matière. */
 function Swatch({ variant, selected, onSelect }: { variant: ProductVariant; selected: boolean; onSelect: () => void }) {
   return (
     <button
       onClick={onSelect}
-      title={variant.available ? variant.color : `${variant.color} — épuisé`}
+      title={variant.available ? variant.color : `${variant.color} - épuisé`}
       aria-label={variant.color}
       aria-pressed={selected}
       className={`relative h-9 w-9 rounded-full border transition-all ${
@@ -46,8 +48,7 @@ export default function Product() {
   const { id = "" } = useParams<{ id: string }>();
   const { data: product, isLoading } = useProduct(id);
   const addToCart = useCartStore((s) => s.addToCart);
-  const wishlist = useCartStore((s) => s.wishlist);
-  const toggleWish = useCartStore((s) => s.toggleWish);
+  const { has, toggle: toggleWish } = useWishlist();
 
   const [variantSlug, setVariantSlug] = useState<string | null>(null);
   const [activeImage, setActiveImage] = useState(0);
@@ -69,11 +70,45 @@ export default function Product() {
     return [...(variant?.images ?? []), ...shared];
   }, [product, variant]);
 
+  // Appelé avant les retours anticipés : un hook ne peut pas être conditionnel.
+  useSeo({
+    title: product?.name ?? "Chargement",
+    description: product
+      ? `${product.name}, ${product.material}. ${product.description.slice(0, 130)}`
+      : undefined,
+    image: product?.image,
+    // Fiche produit Schema.org : c'est elle qui permet à Google d'afficher le
+    // prix et la disponibilite directement dans ses resultats.
+    jsonLd: product
+      ? {
+          "@context": "https://schema.org",
+          "@type": "Product",
+          name: product.name,
+          description: product.description,
+          image: product.images.map((image) => image.url),
+          material: product.material,
+          category: product.category,
+          sku: product.variants?.[0]?.sku,
+          brand: { "@type": "Brand", name: "HUWSTORE" },
+          offers: {
+            "@type": "Offer",
+            price: product.price,
+            priceCurrency: "XOF",
+            availability:
+              product.badge === "Rupture"
+                ? "https://schema.org/OutOfStock"
+                : "https://schema.org/InStock",
+            url: window.location.href,
+          },
+        }
+      : undefined,
+  });
+
   if (isLoading) return <div className="mx-auto max-w-[1400px] px-5 py-20 text-center text-taupe">Chargement…</div>;
   if (!product) return null;
 
   const soldOut = !variant?.available;
-  const wished = wishlist.includes(product.id);
+  const wished = has(product.id);
   const maxQty = variant?.stock.qty ?? 0;
   const cover = gallery[activeImage] ?? gallery[0];
 
@@ -137,11 +172,6 @@ export default function Product() {
         <div className="lg:pl-6">
           <p className="label-lux text-gold-deep">{product.collection}</p>
           <h1 className="serif mt-2 text-[1.75rem] leading-tight sm:text-3xl md:text-4xl">{product.name}</h1>
-          {product.reviews > 0 && (
-            <div className="mt-3">
-              <Stars n={product.rating} reviews={product.reviews} />
-            </div>
-          )}
 
           <div className="mt-5 flex items-baseline gap-3 sm:mt-6">
             <span className="serif text-2xl text-ink sm:text-3xl">{fcfa(product.price)}</span>
@@ -155,11 +185,17 @@ export default function Product() {
 
           <p className="mt-5 text-sm leading-relaxed text-anthracite">{product.description}</p>
 
+          {product.includedAccessory && (
+            <p className="label-lux mt-4 border border-gold/40 bg-gold/10 px-3 py-2.5 text-anthracite">
+              {product.includedAccessory}
+            </p>
+          )}
+
           {/* Coloris */}
           {product.variants.length > 0 && (
             <div className="mt-7">
               <p className="label-lux text-anthracite">
-                Coloris — <span className="text-taupe">{variant?.color}</span>
+                Coloris - <span className="text-taupe">{variant?.color}</span>
               </p>
               <div className="mt-3 flex flex-wrap gap-3">
                 {product.variants.map((v) => (
@@ -217,10 +253,10 @@ export default function Product() {
           {/* Réassurance */}
           <div className="mt-6 space-y-2.5 text-sm text-anthracite">
             <p className="flex items-center gap-2.5">
-              <Truck className="text-lg text-gold-deep" /> Livraison sous 24 h à 6 jours selon la zone · frais calculés au panier
+              <Truck className="text-lg text-gold-deep" /> Livraison sous 24 h à 6 jours selon la zone - frais calculés au panier
             </p>
             <p className="flex items-center gap-2.5">
-              <Rotate className="text-lg text-gold-deep" /> Retours &amp; échanges gratuits sous 14 jours
+              <Shield className="text-lg text-gold-deep" /> Paiement à la livraison, en espèces
             </p>
           </div>
 
@@ -255,7 +291,7 @@ export default function Product() {
                 <ul className="mt-4 space-y-1.5">
                   {product.specs.features.map((feature) => (
                     <li key={feature} className="flex gap-2">
-                      <span className="text-gold-deep">·</span>
+                      <span className="text-gold-deep">-</span>
                       {feature}
                     </li>
                   ))}
@@ -279,9 +315,11 @@ export default function Product() {
 
             <Accordion title="Conseils d'entretien">{product.care}</Accordion>
 
-            <Accordion title="Livraison &amp; retours">
-              Livraison à domicile ou retrait gratuit en point relais / boutique. Livraison offerte dès 75 000 FCFA d'achat.
-              Paiement à la livraison, Wave ou Orange Money. Retours et échanges gratuits sous 14 jours.
+            <Accordion title="Livraison &amp; paiement">
+              Livraison à domicile ou retrait gratuit en point relais / boutique, partout au Sénégal : 24 h sur Dakar,
+              72 h en région. Les frais dépendent de la zone et sont offerts au-delà du seuil indiqué au panier. Le
+              règlement se fait en espèces à la remise du colis. Les retours et les échanges ne sont pas acceptés :
+              vérifiez l'article devant la personne qui vous le remet.
             </Accordion>
           </div>
         </div>
@@ -310,3 +348,4 @@ export default function Product() {
     </div>
   );
 }
+

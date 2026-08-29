@@ -126,6 +126,18 @@ export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
   );
 }
 
+export function Textarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  const { className = "", rows = 3, ...rest } = props;
+  return (
+    <textarea
+      {...rest}
+      rows={rows}
+      className={`w-full resize-y rounded-lg border px-3 py-2.5 text-sm outline-none transition-colors focus:border-[#c9a876] ${className}`}
+      style={{ background: "var(--adm-surface-2)", borderColor: "var(--adm-border)", color: "var(--adm-text)" }}
+    />
+  );
+}
+
 export function Select(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
   const { className = "", children, ...rest } = props;
   return (

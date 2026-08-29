@@ -1,15 +1,21 @@
 import { api, unwrap, unwrapPage } from "./axiosConfig";
 import type { Product, ProductFacets } from "../data";
 
+/**
+ * Filtres de collection. `category`, `material` et `color` acceptent une valeur
+ * ou une liste : les valeurs d'un même filtre s'additionnent (OU), les filtres
+ * entre eux se cumulent (ET).
+ */
 export type ProductFilters = {
-  category?: string;
-  material?: string;
-  /** Nom ou slug de couleur — l'API accepte les deux. */
-  color?: string;
+  category?: string | string[];
+  material?: string | string[];
+  /** Nom ou slug de couleur - l'API accepte les deux. */
+  color?: string | string[];
   minPrice?: number;
   maxPrice?: number;
   search?: string;
-  sort?: "featured" | "price-asc" | "price-desc" | "new";
+  /** `best` classe par quantités réellement vendues, calculées côté serveur. */
+  sort?: "featured" | "best" | "price-asc" | "price-desc" | "new";
   page?: number;
   limit?: number;
   /** Vue admin : inclut les produits désactivés. */
@@ -49,15 +55,24 @@ export type ProductInput = {
   handleDropMm?: number;
   weightGrams?: number;
   features?: string[];
+  includedAccessory?: string;
   active?: boolean;
   variants: VariantInput[];
 };
 
-/** Les champs modifiables après création — les déclinaisons ont leurs propres routes. */
+/** Les champs modifiables après création - les déclinaisons ont leurs propres routes. */
 export type ProductUpdateInput = Partial<Omit<ProductInput, "id" | "variants">>;
 
+/** Les listes partent en une seule valeur séparée par des virgules. */
+const toParams = (filters: ProductFilters) =>
+  Object.fromEntries(
+    Object.entries(filters)
+      .filter(([, value]) => value !== undefined && value !== "" && !(Array.isArray(value) && value.length === 0))
+      .map(([key, value]) => [key, Array.isArray(value) ? value.join(",") : value]),
+  );
+
 export const getProducts = (filters: ProductFilters = {}) =>
-  unwrapPage<Product>(api.get("/products", { params: filters }));
+  unwrapPage<Product>(api.get("/products", { params: toParams(filters) }));
 
 export const getProductFacets = () => unwrap<ProductFacets>(api.get("/products/facets"));
 

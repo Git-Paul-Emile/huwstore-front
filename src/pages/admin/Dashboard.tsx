@@ -32,7 +32,7 @@ export default function Dashboard() {
 
   return (
     <div>
-      <PageHead title="Tableau de bord" sub="Vue d'ensemble du jour · HUWSTORE #709666259" />
+      <PageHead title="Tableau de bord" sub="Vue d'ensemble du jour - HUWSTORE #709666259" />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Kpi label="CA aujourd'hui" value={fcfa(stats?.revenueToday ?? 0)} />
@@ -91,7 +91,7 @@ export default function Dashboard() {
             <div key={o.id} className="flex items-center justify-between px-5 py-3.5 text-sm">
               <div className="flex items-center gap-4">
                 <span className="font-medium" style={{ color: "var(--adm-text)" }}>{o.id}</span>
-                <span style={{ color: "var(--adm-muted)" }}>{o.client} · {o.city}</span>
+                <span style={{ color: "var(--adm-muted)" }}>{o.client} - {o.city}</span>
               </div>
               <div className="flex items-center gap-4">
                 <span style={{ color: "var(--adm-text)" }}>{fcfa(o.total)}</span>

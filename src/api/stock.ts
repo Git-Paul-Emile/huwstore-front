@@ -40,3 +40,7 @@ export const getStockMovements = () => unwrap<StockMovement[]>(api.get("/stock/m
 
 export const adjustStock = (input: StockAdjustInput) =>
   unwrap<StockMovement & { newQty: number }>(api.post("/stock/adjust", input));
+
+/** Inventaire exportable, au format attendu par Excel en français. */
+export const exportStockCsv = () =>
+  api.get("/stock/export", { responseType: "blob" }).then((res) => res.data as Blob);
