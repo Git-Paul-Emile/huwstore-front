@@ -1,33 +1,29 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Plan du site : uniquement les pages stables. Les fiches produits changent
-  trop souvent pour être listées à la main - à générer au build quand le
-  catalogue sera stabilisé.
+  Repli statique. En production, /sitemap.xml est servi par l'API
+  (GET /sitemap.xml), qui y ajoute chaque fiche produit active avec sa date de
+  dernière modification - voir la réécriture dans vercel.json. Ce fichier ne
+  sert que si la réécriture n'est pas encore branchée.
 -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://huwstore.sn/</loc>
-    <changefreq>weekly</changefreq>
+    <loc>https://huwstore.com/</loc>
+    <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://huwstore.sn/boutique</loc>
-    <changefreq>weekly</changefreq>
+    <loc>https://huwstore.com/boutique</loc>
+    <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://huwstore.sn/contact</loc>
-    <changefreq>yearly</changefreq>
-    <priority>0.5</priority>
-  </url>
-  <url>
-    <loc>https://huwstore.sn/conditions-de-vente</loc>
+    <loc>https://huwstore.com/contact</loc>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
-    <loc>https://huwstore.sn/confidentialite</loc>
+    <loc>https://huwstore.com/confidentialite</loc>
     <changefreq>yearly</changefreq>
-    <priority>0.3</priority>
+    <priority>0.2</priority>
   </url>
 </urlset>

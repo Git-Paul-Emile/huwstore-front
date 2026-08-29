@@ -6,4 +6,4 @@ Disallow: /admin
 Disallow: /commande
 Disallow: /compte
 
-Sitemap: https://huwstore.sn/sitemap.xml
+Sitemap: https://huwstore.com/sitemap.xml
