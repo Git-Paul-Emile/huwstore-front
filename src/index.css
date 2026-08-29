@@ -78,7 +78,7 @@ body {
   animation: fadeUp 0.6s cubic-bezier(0.22, 0.61, 0.36, 1) both;
 }
 
-/* - Back-office : jetons de surface (clair par défaut, sombre optionnel) - */
+/* - Back-office : jetons de surface (thème clair unique) - */
 .adm {
   --adm-bg: #f4f1ec;
   --adm-surface: #ffffff;
@@ -91,18 +91,6 @@ body {
   --adm-nav-text: #e8e2d6;
   --adm-nav-hover: #1f1f1f;
   color: var(--adm-text);
-}
-.adm.dark {
-  --adm-bg: #141310;
-  --adm-surface: #1d1b17;
-  --adm-surface-2: #232019;
-  --adm-border: #322e26;
-  --adm-text: #ece7dd;
-  --adm-muted: #9a9184;
-  --adm-hover: #26221b;
-  --adm-nav: #0b0a08;
-  --adm-nav-text: #d8d2c5;
-  --adm-nav-hover: #1a1813;
 }
 
 @keyframes slideInRight {

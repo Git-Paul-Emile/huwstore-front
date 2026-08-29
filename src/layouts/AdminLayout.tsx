@@ -2,9 +2,10 @@ import { useEffect, useState, type ReactElement } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { ToastProvider } from "../components/admin/ui";
 import { useShop } from "../hooks/useSettings";
+import { useLogout } from "../hooks/useAuth";
 import {
   Grid, Box, Layers, Users, Image, Truck, Tag, Chat, Chart, Cog, Archive,
-  Bell, Sun, Moon, Search, ChevronLeft, ChevronRight, Command, ArrowRight,
+  Bell, LogOut, Search, ChevronLeft, ChevronRight, Command, ArrowRight,
 } from "../components/icons";
 
 const nav: { path: string; label: string; icon: (p: { className?: string }) => ReactElement }[] = [
@@ -25,7 +26,7 @@ const nav: { path: string; label: string; icon: (p: { className?: string }) => R
 export default function AdminLayout() {
   const navigate = useNavigate();
   const shop = useShop();
-  const [dark, setDark] = useState(false);
+  const logout = useLogout();
   const [collapsed, setCollapsed] = useState(false);
   const [palette, setPalette] = useState(false);
   const [pq, setPq] = useState("");
@@ -44,8 +45,12 @@ export default function AdminLayout() {
 
   const paletteResults = nav.filter((n) => n.label.toLowerCase().includes(pq.toLowerCase()));
 
+  function signOut() {
+    logout.mutate(undefined, { onSettled: () => navigate("/") });
+  }
+
   return (
-    <div className={`adm ${dark ? "dark" : ""} flex min-h-screen`} style={{ background: "var(--adm-bg)" }}>
+    <div className="adm flex min-h-screen" style={{ background: "var(--adm-bg)" }}>
       <ToastProvider>
         {/* Sidebar */}
         <aside
@@ -111,16 +116,20 @@ export default function AdminLayout() {
             </button>
 
             <div className="flex items-center gap-2">
-              <button onClick={() => setDark((d) => !d)} className="grid h-9 w-9 place-items-center rounded-lg hover:bg-[var(--adm-hover)]" style={{ color: "var(--adm-text)" }} title="Thème">
-                {dark ? <Sun /> : <Moon />}
-              </button>
-              <button className="relative grid h-9 w-9 place-items-center rounded-lg hover:bg-[var(--adm-hover)]" style={{ color: "var(--adm-text)" }} title="Notifications">
-                <Bell />
-                <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-rose-500" />
-              </button>
               <button onClick={() => navigate("/")} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-[var(--adm-hover)]" style={{ color: "var(--adm-text)" }}>
-                <span className="grid h-7 w-7 place-items-center rounded-full bg-[#c9a876] text-xs font-bold text-black">AD</span>
+                <span className="grid h-7 w-7 place-items-center rounded-full bg-[#c9a876] text-xs font-bold text-black">
+                  {shop.shopName.slice(0, 2).toUpperCase()}
+                </span>
                 <span className="hidden sm:inline">Voir la boutique</span>
+              </button>
+              <button
+                onClick={signOut}
+                disabled={logout.isPending}
+                className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-[var(--adm-hover)] disabled:opacity-60"
+                style={{ color: "var(--adm-text)" }}
+              >
+                <LogOut />
+                <span className="hidden sm:inline">Se déconnecter</span>
               </button>
             </div>
           </header>

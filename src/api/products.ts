@@ -33,6 +33,21 @@ export type VariantInput = {
   stockThreshold?: number;
 };
 
+/**
+ * Déclinaison en mise à jour. `id` présent = coloris existant (on modifie ses
+ * libellés et sa galerie) ; `id` absent = nouveau coloris (stock initial 0). La
+ * quantité en stock ne s'édite pas ici : elle passe par l'écran Stock.
+ */
+export type VariantUpdateInput = {
+  id?: string;
+  color: string;
+  colorSlug: string;
+  hex: string;
+  hexSecondary?: string;
+  images: string[];
+  stockThreshold?: number;
+};
+
 export type ProductInput = {
   id?: string;
   slug?: string;
@@ -60,8 +75,15 @@ export type ProductInput = {
   variants: VariantInput[];
 };
 
-/** Les champs modifiables après création - les déclinaisons ont leurs propres routes. */
-export type ProductUpdateInput = Partial<Omit<ProductInput, "id" | "variants">>;
+/**
+ * Champs modifiables après création. `variants`, s'il est fourni, décrit l'état
+ * complet voulu des coloris : ceux absents sont archivés côté serveur.
+ */
+export type ProductUpdateInput = Partial<Omit<ProductInput, "id" | "variants" | "videoUrl">> & {
+  /** Chaîne = nouvelle URL ; `null` = retirer la vidéo ; absent = ne pas toucher. */
+  videoUrl?: string | null;
+  variants?: VariantUpdateInput[];
+};
 
 /** Les listes partent en une seule valeur séparée par des virgules. */
 const toParams = (filters: ProductFilters) =>

@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Card, PageHead, Btn, useUI, fcfa } from "../../components/admin/ui";
-import { useSalesByCategory, useTopProducts } from "../../hooks/useStats";
-import { useOrders } from "../../hooks/useOrders";
+import { useOverview, useSalesByCategory, useTopProducts } from "../../hooks/useStats";
 import { exportOrdersCsv } from "../../api/orders";
 import { Download } from "../../components/icons";
 import { downloadBlob, stampedName } from "../../utils/download";
@@ -10,12 +9,10 @@ export default function Stats() {
   const { toast } = useUI();
   const [period, setPeriod] = useState("30");
   const { data: salesByCategory = [] } = useSalesByCategory();
-  const { data: orders = [] } = useOrders();
+  // Chiffres agrégés en base : justes même au-delà de quelques centaines de commandes.
+  const { data: overview } = useOverview(Number(period));
   const { data: top = [] } = useTopProducts(Number(period), 5);
 
-  const ca = orders.reduce((n, o) => n + (o.pay === "Payé" ? o.total : 0), 0);
-  const paidCount = orders.filter((o) => o.pay === "Payé").length;
-  const avg = Math.round(ca / Math.max(1, paidCount));
   const categoryTotal = salesByCategory.reduce((n, c) => n + c.value, 0) || 1;
 
   async function exportReport() {
@@ -45,10 +42,10 @@ export default function Stats() {
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {[
-          { l: "Chiffre d'affaires", v: fcfa(ca) },
-          { l: "Panier moyen", v: fcfa(avg) },
-          { l: "Commandes encaissées", v: String(paidCount) },
-          { l: "Articles vendus", v: String(top.reduce((n, p) => n + p.qtySold, 0)) },
+          { l: "Chiffre d'affaires encaissé", v: fcfa(overview?.paidRevenue ?? 0) },
+          { l: "Panier moyen", v: fcfa(overview?.avgBasket ?? 0) },
+          { l: "Commandes", v: String(overview?.orders ?? 0) },
+          { l: "Articles vendus", v: String(overview?.itemsSold ?? 0) },
         ].map((k) => (
           <Card key={k.l} className="p-5">
             <p className="text-xs uppercase tracking-wider" style={{ color: "var(--adm-muted)" }}>{k.l}</p>

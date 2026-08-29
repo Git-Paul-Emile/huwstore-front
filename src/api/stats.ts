@@ -23,3 +23,20 @@ export type TopProduct = {
 
 export const getTopProducts = (params: { days?: number; limit?: number } = {}) =>
   unwrap<TopProduct[]>(api.get("/stats/top-products", { params }));
+
+/**
+ * Chiffres clés sur une fenêtre glissante (recueil : « Nombre de commandes,
+ * Chiffre d'affaires »). Agrégés en base : justes quel que soit le volume.
+ */
+export type Overview = {
+  periodDays: number;
+  orders: number;
+  revenue: number;
+  paidOrders: number;
+  paidRevenue: number;
+  itemsSold: number;
+  avgBasket: number;
+};
+
+export const getOverview = (params: { days?: number } = {}) =>
+  unwrap<Overview>(api.get("/stats/overview", { params }));

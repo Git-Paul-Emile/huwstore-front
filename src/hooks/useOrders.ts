@@ -21,13 +21,9 @@ export const useOrderPage = (filters: OrderFilters = {}) =>
 export const useOrders = (filters: OrderFilters = {}) =>
   useQuery({ queryKey: ["orders", filters], queryFn: () => getOrders(filters), select: (page) => page.items ?? EMPTY });
 
-/**
- * Une commande précise. `token` n'est fourni que pour une commande passée sans
- * compte : il fait partie de la clé de cache, sinon deux lectures différentes
- * du même identifiant se partageraient une réponse.
- */
-export const useOrder = (id: string, token?: string) =>
-  useQuery({ queryKey: ["order", id, token ?? null], queryFn: () => getOrder(id, token), enabled: Boolean(id) });
+/** Une commande précise, lisible seulement par son acheteuse connectée. */
+export const useOrder = (id: string) =>
+  useQuery({ queryKey: ["order", id], queryFn: () => getOrder(id), enabled: Boolean(id) });
 
 export const useMyOrders = () => useQuery({ queryKey: ["orders", "mine"], queryFn: getMyOrders });
 

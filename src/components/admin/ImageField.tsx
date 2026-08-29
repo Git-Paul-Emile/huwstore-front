@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { useUploadImage } from "../../hooks/useUploadImage";
 import type { MediaFolder } from "../../api/media";
 import { Image, Close } from "../icons";
-import { Btn, Input } from "./ui";
+import { Btn } from "./ui";
 
 /**
  * Classes ecrites en toutes lettres : Tailwind analyse le code source comme du
@@ -15,9 +15,9 @@ const FIT_CLASSES = { cover: "object-cover", contain: "object-contain" } as cons
  * Champ image du back-office.
  *
  * C'est la pièce qui rend la boutique autonome : elle choisit une photo sur son
- * ordinateur ou son téléphone, le fichier part sur Cloudinary et l'adresse
- * revient toute seule. Le champ texte reste disponible en dessous pour coller
- * une adresse existante - utile pour réutiliser une image déjà en ligne.
+ * ordinateur ou son téléphone, le fichier part sur Cloudinary et s'affiche
+ * aussitôt en aperçu. Aucune adresse d'image n'est jamais saisie ni montrée à
+ * la main.
  */
 export default function ImageField({
   value,
@@ -96,13 +96,7 @@ export default function ImageField({
             }}
           />
 
-          <Input
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder="…ou collez l'adresse d'une image déjà en ligne"
-            className="mt-2"
-          />
-          {hint && <p className="mt-1 text-[0.7rem]" style={{ color: "var(--adm-muted)" }}>{hint}</p>}
+          {hint && <p className="mt-2 text-[0.7rem]" style={{ color: "var(--adm-muted)" }}>{hint}</p>}
           {error && <p className="mt-1 text-[0.7rem] text-rose-500">{error}</p>}
         </div>
       </div>

@@ -41,7 +41,10 @@ export function useCreateProduct() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: ProductInput) => createProduct(input),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["products"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["stock"] });
+    },
   });
 }
 
@@ -49,7 +52,11 @@ export function useUpdateProduct() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: ProductUpdateInput }) => updateProduct(id, input),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["products"] }),
+    // Modifier les coloris crée/archive des lignes de stock : l'écran Stock est périmé.
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["stock"] });
+    },
   });
 }
 

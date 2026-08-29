@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { useUploadImage } from "../../hooks/useUploadImage";
 import type { MediaFolder } from "../../api/media";
 import { Close, Plus } from "../icons";
-import { Btn, Input } from "./ui";
+import { Btn } from "./ui";
 
 /**
  * Galerie photo d'une déclinaison couleur.
@@ -119,19 +119,6 @@ export default function GalleryField({
           </p>
         )}
       </div>
-
-      <Input
-        placeholder="…ou collez l'adresse d'une image et validez avec Entrée"
-        className="mt-2"
-        onKeyDown={(e) => {
-          if (e.key !== "Enter") return;
-          e.preventDefault();
-          const value = e.currentTarget.value.trim();
-          if (!value) return;
-          onChange([...images, value]);
-          e.currentTarget.value = "";
-        }}
-      />
 
       {error && <p className="mt-1 text-[0.7rem] text-rose-500">{error}</p>}
     </div>

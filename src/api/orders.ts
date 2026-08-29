@@ -24,14 +24,6 @@ export type OrderItem = {
 
 export type Order = {
   id: string;
-  /**
-   * Jeton de lecture, renvoyé UNIQUEMENT à la création de la commande. C'est
-   * lui qui permet à une acheteuse sans compte de revenir sur son reçu et de
-   * télécharger sa facture.
-   */
-  publicToken?: string;
-  /** Vrai quand la commande a été passée sans compte. */
-  guest?: boolean;
   client: string;
   phone: string;
   email?: string;
@@ -91,18 +83,12 @@ export const getOrders = (filters: OrderFilters = {}) => unwrapPage<Order>(api.g
 
 export const getMyOrders = () => unwrap<Order[]>(api.get("/orders/mine"));
 
-/**
- * Lecture d'une commande. Le jeton n'est nécessaire que pour une commande
- * passée sans compte : connectée, la cliente est reconnue par son jeton d'accès.
- */
-export const getOrder = (id: string, token?: string) =>
-  unwrap<Order>(api.get(`/orders/${id}`, { params: token ? { token } : undefined }));
+/** Lecture d'une commande : réservée à son acheteuse connectée. */
+export const getOrder = (id: string) => unwrap<Order>(api.get(`/orders/${id}`));
 
 /** Facture PDF. Le serveur renvoie un fichier, pas l'enveloppe JSON habituelle. */
-export const downloadInvoice = (id: string, token?: string) =>
-  api
-    .get(`/orders/${id}/invoice`, { params: token ? { token } : undefined, responseType: "blob" })
-    .then((res) => res.data as Blob);
+export const downloadInvoice = (id: string) =>
+  api.get(`/orders/${id}/invoice`, { responseType: "blob" }).then((res) => res.data as Blob);
 
 export const createOrder = (input: OrderInput) => unwrap<Order>(api.post("/orders", input));
 

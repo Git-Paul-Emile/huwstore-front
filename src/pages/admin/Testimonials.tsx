@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Card, PageHead, Btn, Input, Modal, ConfirmModal, useUI } from "../../components/admin/ui";
+import ImageField from "../../components/admin/ImageField";
 import {
   useTestimonials,
   useCreateTestimonial,
@@ -163,10 +164,15 @@ function TestimonialForm({
           placeholder="Travailler avec HUWSTORE a tout changé…"
         />
       </label>
-      <label className="mt-4 block text-sm">
-        <span style={{ color: "var(--adm-muted)" }}>Photo (URL, facultatif)</span>
-        <Input value={avatar} onChange={(e) => setAvatar(e.target.value)} className="mt-1.5" placeholder="https://…" />
-      </label>
+      <div className="mt-4">
+        <ImageField
+          value={avatar}
+          onChange={setAvatar}
+          folder="temoignages"
+          fit="cover"
+          label="Photo (facultatif)"
+        />
+      </div>
       <div className="mt-4 flex items-end gap-4">
         <label className="block flex-1 text-sm">
           <span style={{ color: "var(--adm-muted)" }}>Position</span>

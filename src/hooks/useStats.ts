@@ -1,7 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
-import { getDashboardStats, getSales7Days, getSalesByCategory, getTopProducts } from "../api/stats";
+import { getDashboardStats, getOverview, getSales7Days, getSalesByCategory, getTopProducts } from "../api/stats";
 
 export const useDashboardStats = () => useQuery({ queryKey: ["stats", "dashboard"], queryFn: getDashboardStats });
+
+/**
+ * Chiffres clés sur `days` jours, agrégés en base. `days` fait partie de la clé
+ * de cache : changer la période déclenche une vraie requête.
+ */
+export const useOverview = (days = 30) =>
+  useQuery({ queryKey: ["stats", "overview", days], queryFn: () => getOverview({ days }) });
 
 export const useSales7Days = () => useQuery({ queryKey: ["stats", "sales-7-days"], queryFn: getSales7Days });
 

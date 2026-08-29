@@ -3,8 +3,9 @@ import { Card, PageHead, Pill, Btn, Input, Select, Modal, ConfirmModal, useUI, f
 import { useCategories } from "../../hooks/useCategories";
 import { useCreateProduct, useDeleteProduct, useProducts, useUpdateProduct } from "../../hooks/useProducts";
 import type { Product } from "../../data";
-import type { ProductInput, ProductUpdateInput, VariantInput } from "../../api/products";
+import type { ProductInput, ProductUpdateInput } from "../../api/products";
 import GalleryField from "../../components/admin/GalleryField";
+import VideoField from "../../components/admin/VideoField";
 import { Plus, Edit, Copy, Archive, Search, Filter } from "../../components/icons";
 
 export default function Products() {
@@ -67,6 +68,7 @@ export default function Products() {
         care: p.care,
         price: p.price,
         compareAt: p.compareAt,
+        videoUrl: p.videoUrl,
         closure: p.specs.closure,
         capacity: p.specs.capacity,
         widthTopMm: p.specs.widthTopMm,
@@ -234,7 +236,35 @@ const toMm = (cmValue: string) => {
 };
 const toCm = (mm?: number) => (mm === undefined ? "" : String(mm / 10));
 
-const emptyVariant = (): VariantInput => ({ color: "", colorSlug: "", hex: "#1a1a1a", images: [], stockQty: 0, stockThreshold: 3 });
+/**
+ * Coloris en cours d'édition. `id` présent = coloris déjà en base (on modifie
+ * son libellé, sa teinte, sa galerie ; le stock reste en lecture seule, il se
+ * pilote dans l'écran Stock). `id` absent = nouveau coloris.
+ */
+type VariantDraft = {
+  id?: string;
+  color: string;
+  hex: string;
+  hexSecondary?: string;
+  images: string[];
+  stockQty: number;
+  stockThreshold: number;
+};
+
+const emptyVariant = (): VariantDraft => ({ color: "", hex: "#1a1a1a", images: [], stockQty: 0, stockThreshold: 3 });
+
+const toDrafts = (product: Product | null): VariantDraft[] =>
+  product
+    ? product.variants.map((v) => ({
+        id: v.id,
+        color: v.color,
+        hex: v.hex,
+        hexSecondary: v.hexSecondary,
+        images: v.images.map((image) => image.url),
+        stockQty: v.stock.qty,
+        stockThreshold: v.stock.threshold,
+      }))
+    : [emptyVariant()];
 
 const DIMENSION_FIELDS = [
   { key: "widthTopMm", label: "Largeur en haut (cm)" },
@@ -276,25 +306,26 @@ function ProductForm({
   const [weight, setWeight] = useState(String(product?.specs.weightGrams ?? ""));
   const [features, setFeatures] = useState((product?.specs.features ?? []).join("\n"));
   const [includedAccessory, setIncludedAccessory] = useState(product?.includedAccessory ?? "");
+  const [videoUrl, setVideoUrl] = useState(product?.videoUrl ?? "");
   const [dimensions, setDimensions] = useState<Record<DimensionKey, string>>(() =>
     Object.fromEntries(DIMENSION_FIELDS.map((f) => [f.key, toCm(product?.specs[f.key])])) as Record<DimensionKey, string>,
   );
 
-  // Les déclinaisons ne se saisissent qu'à la création : les modifier ensuite
-  // toucherait au stock et aux commandes, ce qui passe par l'écran Stock.
-  const [variants, setVariants] = useState<VariantInput[]>([emptyVariant()]);
+  // Coloris éditables à la création comme à l'édition. Retirer un coloris
+  // existant l'archive côté serveur (les commandes passées restent lisibles) ;
+  // les quantités en stock, elles, se modifient depuis l'écran Stock.
+  const [variants, setVariants] = useState<VariantDraft[]>(() => toDrafts(product));
 
-  const setVariant = (index: number, patch: Partial<VariantInput>) =>
+  const setVariant = (index: number, patch: Partial<VariantDraft>) =>
     setVariants((list) => list.map((v, i) => (i === index ? { ...v, ...patch } : v)));
 
   const priceNumber = Number(price);
   const compareNumber = Number(compareAt);
 
   const variantsValid =
-    isEdit ||
-    (variants.length > 0 &&
-      variants.every((v) => v.color.trim() !== "" && /^#[0-9a-fA-F]{6}$/.test(v.hex)) &&
-      new Set(variants.map((v) => slugify(v.color))).size === variants.length);
+    variants.length > 0 &&
+    variants.every((v) => v.color.trim() !== "" && /^#[0-9a-fA-F]{6}$/.test(v.hex)) &&
+    new Set(variants.map((v) => slugify(v.color))).size === variants.length;
 
   const valid =
     name.trim() !== "" &&
@@ -320,6 +351,7 @@ function ProductForm({
     closure: closure.trim() || undefined,
     capacity: capacity.trim() || undefined,
     includedAccessory: includedAccessory.trim() || undefined,
+    videoUrl: videoUrl.trim() || undefined,
     weightGrams: weight === "" ? undefined : Number(weight),
     features: features
       .split("\n")
@@ -331,7 +363,20 @@ function ProductForm({
   const submit = () => {
     if (!valid) return;
     if (isEdit) {
-      onUpdate(commonFields());
+      onUpdate({
+        ...commonFields(),
+        // Vidéo : chaîne vide = on retire la vidéo (null), pas « ne pas toucher ».
+        videoUrl: videoUrl.trim() || null,
+        variants: variants.map((v) => ({
+          ...(v.id ? { id: v.id } : {}),
+          color: v.color.trim(),
+          colorSlug: slugify(v.color),
+          hex: v.hex,
+          hexSecondary: v.hexSecondary || undefined,
+          images: v.images,
+          stockThreshold: Number(v.stockThreshold ?? 3),
+        })),
+      });
       return;
     }
     onCreate({
@@ -445,6 +490,9 @@ function ProductForm({
             placeholder="Livré avec une pochette assortie"
           />
         </label>
+        <div className="md:col-span-2">
+          <VideoField value={videoUrl} onChange={setVideoUrl} folder="produits" label="Vidéo du produit (facultatif)" />
+        </div>
 
         {DIMENSION_FIELDS.map((field) => (
           <label key={field.key} className="block text-sm">
@@ -474,52 +522,44 @@ function ProductForm({
 
         <p className={sectionTitle} style={labelStyle}>Coloris</p>
 
-        {product ? (
-          <div className="md:col-span-2">
-            <div className="flex flex-wrap gap-2">
-              {product.variants.map((v) => (
-                <span
-                  key={v.id}
-                  className="inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm"
-                  style={{ borderColor: "var(--adm-border)", color: "var(--adm-text)" }}
-                >
-                  <span
-                    className="h-3.5 w-3.5 rounded-full border"
-                    style={{
-                      borderColor: "var(--adm-border)",
-                      background: v.hexSecondary ? `linear-gradient(135deg, ${v.hex} 50%, ${v.hexSecondary} 50%)` : v.hex,
-                    }}
-                  />
-                  {v.color} - {v.stock.qty} en stock
+        <div className="md:col-span-2 space-y-4">
+          {variants.map((variant, index) => (
+            <div
+              key={variant.id ?? `new-${index}`}
+              className="space-y-4 rounded-lg border p-4"
+              style={{ borderColor: "var(--adm-border)" }}
+            >
+              {/* En-tête du coloris : numéro + retrait */}
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm font-medium" style={{ color: "var(--adm-text)" }}>
+                  Coloris {index + 1}
+                  {!variant.id && <span style={labelStyle}> · nouveau</span>}
                 </span>
-              ))}
-            </div>
-            <p className="mt-2 text-xs" style={labelStyle}>
-              Les quantités se modifient depuis l'écran Stock, pour que chaque changement laisse un mouvement traçable.
-            </p>
-          </div>
-        ) : (
-          <div className="md:col-span-2 space-y-3">
-            {variants.map((variant, index) => (
-              <div
-                key={index}
-                className="grid gap-3 rounded-lg border p-3 md:grid-cols-[1fr_auto_auto_auto_auto]"
-                style={{ borderColor: "var(--adm-border)" }}
-              >
+                {variants.length > 1 && (
+                  <Btn variant="ghost" onClick={() => setVariants((list) => list.filter((_, i) => i !== index))}>
+                    {variant.id ? "Archiver" : "Retirer"}
+                  </Btn>
+                )}
+              </div>
+
+              {/* Nom : pleine largeur, jamais tronqué */}
+              <label className="block text-sm">
+                <span style={labelStyle}>Nom du coloris</span>
+                <Input
+                  value={variant.color}
+                  onChange={(e) => setVariant(index, { color: e.target.value })}
+                  className="mt-1.5"
+                  placeholder="Noir & marron"
+                />
+                {variant.color && (
+                  <span className="mt-1 block text-xs" style={labelStyle}>Adresse : /{slugify(variant.color)}</span>
+                )}
+              </label>
+
+              {/* Contrôles compacts : ils passent à la ligne au lieu de se serrer */}
+              <div className="flex flex-wrap items-start gap-x-6 gap-y-3">
                 <label className="block text-sm">
-                  <span style={labelStyle}>Nom du coloris</span>
-                  <Input
-                    value={variant.color}
-                    onChange={(e) => setVariant(index, { color: e.target.value })}
-                    className="mt-1.5"
-                    placeholder="Noir"
-                  />
-                  {variant.color && (
-                    <span className="mt-1 block text-xs" style={labelStyle}>slug : {slugify(variant.color)}</span>
-                  )}
-                </label>
-                <label className="block text-sm">
-                  <span style={labelStyle}>Teinte</span>
+                  <span className="block" style={labelStyle}>Teinte</span>
                   <input
                     type="color"
                     value={variant.hex}
@@ -529,7 +569,7 @@ function ProductForm({
                   />
                 </label>
                 <label className="block text-sm">
-                  <span style={labelStyle}>2ᵉ teinte</span>
+                  <span className="block" style={labelStyle}>2ᵉ teinte</span>
                   <input
                     type="color"
                     value={variant.hexSecondary ?? "#ffffff"}
@@ -539,17 +579,24 @@ function ProductForm({
                   />
                 </label>
                 <label className="block text-sm">
-                  <span style={labelStyle}>Stock</span>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={String(variant.stockQty ?? 0)}
-                    onChange={(e) => setVariant(index, { stockQty: Number(e.target.value) })}
-                    className="mt-1.5 w-24"
-                  />
+                  <span className="block" style={labelStyle}>Stock</span>
+                  {variant.id ? (
+                    <span className="mt-1.5 flex h-9 items-center text-sm" style={{ color: "var(--adm-text)" }}>
+                      {variant.stockQty}
+                      <span className="ml-2 text-[0.7rem]" style={labelStyle}>modifiable dans Stock</span>
+                    </span>
+                  ) : (
+                    <Input
+                      type="number"
+                      min={0}
+                      value={String(variant.stockQty ?? 0)}
+                      onChange={(e) => setVariant(index, { stockQty: Number(e.target.value) })}
+                      className="mt-1.5 w-24"
+                    />
+                  )}
                 </label>
                 <label className="block text-sm">
-                  <span style={labelStyle}>Seuil</span>
+                  <span className="block" style={labelStyle}>Seuil d'alerte</span>
                   <Input
                     type="number"
                     min={0}
@@ -558,33 +605,29 @@ function ProductForm({
                     className="mt-1.5 w-24"
                   />
                 </label>
-                <div className="md:col-span-5">
-                  <GalleryField
-                    images={variant.images}
-                    onChange={(images) => setVariant(index, { images })}
-                    folder="produits"
-                    label={`Photos du coloris ${variant.color || index + 1}`}
-                  />
-                </div>
-                {variants.length > 1 && (
-                  <div className="md:col-span-5">
-                    <Btn variant="ghost" onClick={() => setVariants((list) => list.filter((_, i) => i !== index))}>
-                      Retirer ce coloris
-                    </Btn>
-                  </div>
-                )}
               </div>
-            ))}
-            <Btn variant="ghost" onClick={() => setVariants((list) => [...list, emptyVariant()])}>
-              <Plus /> Ajouter un coloris
-            </Btn>
-            {!variantsValid && (
-              <p className="text-xs text-rose-500">
-                Chaque coloris doit avoir un nom unique et une teinte valide.
-              </p>
-            )}
-          </div>
-        )}
+
+              <GalleryField
+                images={variant.images}
+                onChange={(images) => setVariant(index, { images })}
+                folder="produits"
+                label={`Photos du coloris ${variant.color || index + 1}`}
+              />
+
+              {variant.id && variants.length > 1 && (
+                <p className="text-xs" style={labelStyle}>
+                  « Archiver » masque ce coloris de la boutique ; les commandes déjà passées restent lisibles.
+                </p>
+              )}
+            </div>
+          ))}
+          <Btn variant="ghost" onClick={() => setVariants((list) => [...list, emptyVariant()])}>
+            <Plus /> Ajouter un coloris
+          </Btn>
+          {!variantsValid && (
+            <p className="text-xs text-rose-500">Chaque coloris doit avoir un nom unique et une teinte valide.</p>
+          )}
+        </div>
       </div>
 
       <div className="mt-6 flex justify-end gap-3">

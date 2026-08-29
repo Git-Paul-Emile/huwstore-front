@@ -5,13 +5,14 @@ export type MediaFolder = "produits" | "categories" | "bannieres" | "temoignages
 export type Media = { url: string; publicId: string; width: number; height: number };
 
 /**
- * Téléverse une image depuis le back-office.
+ * Téléverse une image OU une vidéo depuis le back-office.
  *
- * Le fichier part encodé en base64 dans le corps JSON : la boutique choisit une
- * photo sur son ordinateur ou son téléphone, sans jamais manipuler d'URL. Le
- * serveur le dépose sur Cloudinary et renvoie l'adresse définitive.
+ * Le fichier part encodé en base64 dans le corps JSON : la boutique choisit un
+ * fichier sur son ordinateur ou son téléphone, sans jamais manipuler d'URL. Le
+ * serveur le dépose sur Cloudinary (il déduit image/vidéo du type déclaré) et
+ * renvoie l'adresse définitive.
  */
-export const uploadImage = (file: string, folder: MediaFolder = "produits", label?: string) =>
+export const uploadMedia = (file: string, folder: MediaFolder = "produits", label?: string) =>
   unwrap<Media>(api.post("/media", { file, folder, label }));
 
 /** Lit un fichier choisi dans un <input type="file"> et le convertit en data URI. */

@@ -2,6 +2,7 @@ import { Suspense, lazy } from "react";
 import { Route, Routes } from "react-router-dom";
 import MainLayout from "../layouts/MainLayout";
 import RequireAdmin from "../components/RequireAdmin";
+import RequireAuth from "../components/RequireAuth";
 import ScrollToTop from "../components/ScrollToTop";
 import { useRestoreSession } from "../hooks/useAuth";
 import Home from "../pages/Home";
@@ -58,8 +59,22 @@ export function AppRoutes() {
           <Route path="boutique/:category" element={<Listing />} />
           <Route path="produit/:id" element={<Product />} />
           <Route path="compte" element={<Account />} />
-          <Route path="commande" element={<Checkout />} />
-          <Route path="commande/:id" element={<OrderConfirmation />} />
+          <Route
+            path="commande"
+            element={
+              <RequireAuth>
+                <Checkout />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="commande/:id"
+            element={
+              <RequireAuth>
+                <OrderConfirmation />
+              </RequireAuth>
+            }
+          />
           <Route path="confidentialite" element={<Confidentialite />} />
           <Route path="contact" element={<Contact />} />
         </Route>

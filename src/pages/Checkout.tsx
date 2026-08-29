@@ -38,7 +38,6 @@ export default function Checkout() {
   const setDelivery = useCartStore((s) => s.setDelivery);
 
   const user = useAuthStore((s) => s.user);
-  const setAuthOpen = useAuthStore((s) => s.setAuthOpen);
 
   const { data: zones = [] } = useDeliveryZones();
   const { data: addresses = [] } = useAddresses();
@@ -142,10 +141,7 @@ export default function Checkout() {
         items,
       });
       clear();
-      // Sans compte, le jeton est la SEULE clé de lecture du reçu : il part
-      // dans l'URL de redirection, et l'e-mail de confirmation le rappelle.
-      const suffix = order.publicToken ? `?token=${order.publicToken}` : "";
-      navigate(`/commande/${order.id}${suffix}`, { replace: true });
+      navigate(`/commande/${order.id}`, { replace: true });
     } catch (err) {
       setError(readApiError(err, "La commande n'a pas pu être enregistrée."));
     }
@@ -169,23 +165,6 @@ export default function Checkout() {
         <p className="label-lux text-taupe">Étape finale</p>
         <h1 className="serif mt-2 text-2xl md:text-4xl">Finaliser ma commande</h1>
       </header>
-
-      {/* Commander sans compte est possible : la connexion est proposée pour le
-          confort (adresses enregistrées, historique), jamais imposée. */}
-      {!user && (
-        <div className="mb-8 flex flex-wrap items-center justify-between gap-3 border border-taupe/30 bg-cream-tint px-5 py-4">
-          <p className="text-sm text-anthracite">
-            Vous commandez sans compte. <span className="text-taupe">C'est possible et sans frais.</span>
-          </p>
-          <button
-            type="button"
-            onClick={() => setAuthOpen(true)}
-            className="label-lux border border-ink px-5 py-2.5 text-ink transition-colors hover:bg-ink hover:text-cream"
-          >
-            Me connecter pour retrouver mes adresses
-          </button>
-        </div>
-      )}
 
       <form onSubmit={submit} className="grid gap-10 lg:grid-cols-[1fr_380px] lg:gap-14">
         <div className="flex flex-col gap-10">
@@ -230,11 +209,7 @@ export default function Checkout() {
             <Field
               label="E-mail (facultatif)"
               type="email"
-              hint={
-                user
-                  ? "Pour recevoir la confirmation et la facture."
-                  : "Recommandé sans compte : c'est par là que vous recevrez le lien de suivi et la facture."
-              }
+              hint="Pour recevoir la confirmation et la facture."
               value={form.email}
               onChange={(v) => setForm({ ...form, email: v })}
             />

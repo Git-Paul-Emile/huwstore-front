@@ -2,7 +2,7 @@ import { Card, PageHead, Pill, fcfa } from "../../components/admin/ui";
 import { useDashboardStats, useSales7Days, useSalesByCategory } from "../../hooks/useStats";
 import { useOrders } from "../../hooks/useOrders";
 import { useStock } from "../../hooks/useStock";
-import { useClients } from "../../hooks/useClients";
+import { useShop } from "../../hooks/useSettings";
 import { Trend, Alert } from "../../components/icons";
 
 function Kpi({ label, value, delta, tone }: { label: string; value: string; delta?: string; tone?: string }) {
@@ -25,20 +25,20 @@ export default function Dashboard() {
   const { data: salesByCategory = [] } = useSalesByCategory();
   const { data: orders = [] } = useOrders();
   const { data: stock = [] } = useStock();
-  const { data: clients = [] } = useClients();
+  const shop = useShop();
 
   const lowStock = stock.filter((s) => s.qty <= s.threshold);
   const max = Math.max(1, ...sales7.map((s) => s.value));
 
   return (
     <div>
-      <PageHead title="Tableau de bord" sub="Vue d'ensemble du jour - HUWSTORE #709666259" />
+      <PageHead title="Tableau de bord" sub={`Vue d'ensemble du jour - ${shop.shopName}`} />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Kpi label="CA aujourd'hui" value={fcfa(stats?.revenueToday ?? 0)} />
         <Kpi label="Commandes en attente" value={String(stats?.pendingOrders ?? 0)} delta="À traiter" tone="text-amber-600" />
         <Kpi label="Produits en stock faible" value={String(stats?.lowStockCount ?? 0)} delta="Vérifier" tone="text-rose-600" />
-        <Kpi label="Nouveaux clients" value={String(clients.filter((c) => c.segment === "Nouveau").length)} delta="Au total" />
+        <Kpi label="Nouveaux clients" value={String(stats?.newClientsToday ?? 0)} delta="aujourd'hui" />
       </div>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
