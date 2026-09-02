@@ -72,12 +72,15 @@ export default function Account() {
           <p className="label-lux text-gold-deep">Mon compte</p>
           <h1 className="serif mt-1 text-2xl md:text-3xl">Bonjour, {user.name.split(" ")[0]}</h1>
         </div>
-        <button onClick={logout} className="hidden items-center gap-2 text-sm text-taupe hover:text-bordeaux sm:flex">
-          <LogOut /> Déconnexion
-        </button>
       </div>
 
-      {/* Onglets mobiles scrollables */}
+      {/* Onglets mobiles scrollables.
+
+          La déconnexion ferme la liste, comme elle ferme la barre latérale sur
+          grand écran : c'est le même endroit, la navigation, à la place que
+          chaque taille d'écran lui donne. La retirer d'ici l'aurait rendue
+          introuvable sur téléphone, où la barre latérale n'existe pas - et le
+          téléphone est l'écran de presque toutes les clientes. */}
       <div className="no-scrollbar -mx-5 mb-6 flex gap-2 overflow-x-auto px-5 lg:hidden">
         {tabs.map((t) => (
           <button
@@ -88,6 +91,12 @@ export default function Account() {
             {t.label}
           </button>
         ))}
+        <button
+          onClick={logout}
+          className="label-lux flex items-center gap-2 whitespace-nowrap border border-taupe/40 px-4 py-2.5 text-[0.6rem] text-taupe transition-colors hover:border-bordeaux hover:text-bordeaux"
+        >
+          <LogOut /> Déconnexion
+        </button>
       </div>
 
       <div className="grid gap-8 lg:grid-cols-[240px_1fr]">
@@ -543,7 +552,7 @@ function Support() {
       <p className="label-lux mt-8 text-taupe">Questions fréquentes</p>
       <div className="mt-3 space-y-2">
         {[
-          ["Quels sont les délais de livraison ?", "24 h sur Dakar, 72 h en région selon la zone choisie."],
+          ["Quels sont les délais de livraison ?", "24 h sur Dakar, sauf le dimanche. Ailleurs, le délai de la zone choisie est affiché au panier."],
           ["Comment se passe le paiement ?", "En espèces, à la remise du colis. Aucun paiement en ligne n'est demandé."],
           [
             "Puis-je retourner un article ?",

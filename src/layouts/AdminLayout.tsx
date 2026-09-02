@@ -15,7 +15,7 @@ const nav: { path: string; label: string; icon: (p: { className?: string }) => R
   { path: "stock", label: "Stock", icon: Layers },
   { path: "commandes", label: "Commandes & livraison", icon: Truck },
   { path: "clients", label: "Clients", icon: Users },
-  { path: "bannieres", label: "Bannières", icon: Image },
+  { path: "bannieres", label: "Campagnes", icon: Image },
   { path: "promos", label: "Promotions", icon: Tag },
   { path: "temoignages", label: "Témoignages", icon: Chat },
   { path: "avis", label: "Avis sur le site", icon: Bell },
@@ -52,12 +52,22 @@ export default function AdminLayout() {
   return (
     <div className="adm flex min-h-screen" style={{ background: "var(--adm-bg)" }}>
       <ToastProvider>
-        {/* Sidebar */}
+        {/*
+         * Colonne de navigation, haute d'un écran exactement.
+         *
+         * `overflow-hidden` sur la colonne et `min-h-0 overflow-y-auto` sur la
+         * liste : sans ces deux-là, les douze entrées du menu dépassaient la
+         * hauteur de l'écran et POUSSAIENT le pied de colonne hors du fond
+         * noir - la déconnexion se retrouvait écrite en clair sur le fond
+         * clair de la page, donc invisible. Un enfant `flex-1` refuse de
+         * rétrécir sous sa hauteur naturelle tant qu'on ne lui donne pas
+         * `min-h-0` : c'est lui qui rend le défilement possible.
+         */}
         <aside
-          className={`sticky top-0 flex h-screen flex-col transition-all ${collapsed ? "w-16" : "w-60"}`}
+          className={`sticky top-0 flex h-screen flex-col overflow-hidden transition-all ${collapsed ? "w-16" : "w-60"}`}
           style={{ background: "var(--adm-nav)", color: "var(--adm-nav-text)" }}
         >
-          <div className="flex items-center gap-2 px-4 py-5">
+          <div className="flex shrink-0 items-center gap-2 px-4 py-5">
             <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#c9a876] text-sm font-bold text-black">
               {shop.shopName.slice(0, 2).toUpperCase()}
             </span>
@@ -69,7 +79,7 @@ export default function AdminLayout() {
             )}
           </div>
 
-          <nav className="flex-1 space-y-1 px-2 py-2">
+          <nav className="no-scrollbar min-h-0 flex-1 space-y-1 overflow-y-auto px-2 py-2">
             {nav.map((n) => {
               const Icon = n.icon;
               return (
@@ -89,12 +99,23 @@ export default function AdminLayout() {
             })}
           </nav>
 
-          <button
-            onClick={() => setCollapsed((c) => !c)}
-            className="m-2 flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm hover:bg-[var(--adm-nav-hover)]"
-          >
-            {collapsed ? <ChevronRight /> : <><ChevronLeft /> Réduire</>}
-          </button>
+          {/* Pied de colonne, jamais emporté par le défilement du menu.
+
+              La déconnexion est ici, avec la navigation, et non plus dans
+              l'en-tête : c'est une sortie, pas un outil de travail. La poser à
+              côté de la recherche l'exposait à un clic malheureux au milieu
+              d'une saisie. */}
+          <div className="shrink-0 border-t border-white/10 p-2">
+            <button
+              onClick={signOut}
+              disabled={logout.isPending}
+              title="Se déconnecter"
+              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors hover:bg-[var(--adm-nav-hover)] disabled:opacity-60 ${collapsed ? "justify-center" : ""}`}
+            >
+              <span className="text-lg"><LogOut /></span>
+              {!collapsed && <span>Se déconnecter</span>}
+            </button>
+          </div>
         </aside>
 
         {/* Main */}
@@ -104,6 +125,21 @@ export default function AdminLayout() {
             className="sticky top-0 z-40 flex items-center gap-4 border-b px-6 py-3"
             style={{ background: "var(--adm-surface)", borderColor: "var(--adm-border)" }}
           >
+            {/* Replier le menu : une icône seule, posée avant la recherche.
+                C'est une commande de mise en page, elle appartient à la barre
+                d'outils - en bas du menu elle était loin du regard et poussait
+                la navigation vers le bas. */}
+            <button
+              onClick={() => setCollapsed((c) => !c)}
+              title={collapsed ? "Déplier le menu" : "Réduire le menu"}
+              aria-label={collapsed ? "Déplier le menu" : "Réduire le menu"}
+              aria-expanded={!collapsed}
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-lg transition-colors hover:bg-[var(--adm-hover)]"
+              style={{ color: "var(--adm-text)" }}
+            >
+              {collapsed ? <ChevronRight /> : <ChevronLeft />}
+            </button>
+
             <button
               onClick={() => setPalette(true)}
               className="flex flex-1 items-center gap-2 rounded-lg border px-3 py-2 text-sm max-w-md"
@@ -121,15 +157,6 @@ export default function AdminLayout() {
                   {shop.shopName.slice(0, 2).toUpperCase()}
                 </span>
                 <span className="hidden sm:inline">Voir la boutique</span>
-              </button>
-              <button
-                onClick={signOut}
-                disabled={logout.isPending}
-                className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-[var(--adm-hover)] disabled:opacity-60"
-                style={{ color: "var(--adm-text)" }}
-              >
-                <LogOut />
-                <span className="hidden sm:inline">Se déconnecter</span>
               </button>
             </div>
           </header>

@@ -45,7 +45,7 @@ export default function Header() {
 
   // Mesure réelle (bandeau d'annonce compris) : elle varie selon que le
   // bandeau est affiché et selon la taille du logo au changement de largeur -
-  // impossible à coder en dur sans que le Hero de l'accueil ne déborde ou ne
+  // impossible à coder en dur sans que le bloc d'accueil ne déborde ou ne
   // laisse un vide sous la navbar.
   useLayoutEffect(() => {
     const el = navRef.current;
@@ -106,69 +106,72 @@ export default function Header() {
           scrolled ? "bg-cream/95 shadow-[0_1px_0_rgba(184,175,163,0.35),0_8px_24px_-18px_rgba(15,15,15,0.4)] backdrop-blur" : "bg-cream"
         }`}
       >
-        <div className="mx-auto grid max-w-[1400px] grid-cols-[auto_1fr_auto] items-center gap-4 px-5 md:px-10 py-4">
-          {/* logo, à gauche */}
-          <div className="flex items-center gap-3">
-            <button className="lg:hidden text-2xl text-ink" onClick={() => setMobile(true)} aria-label="Menu">
+        <div className="mx-auto grid max-w-[1400px] grid-cols-[1fr_auto_1fr] items-center gap-4 px-5 md:px-10 py-4">
+          {/* menu, à gauche (bouton hamburger en dessous de xl, où les cinq
+              onglets ne tiennent plus dans un tiers de la barre) */}
+          <div className="flex min-w-0 items-center gap-6 justify-self-start">
+            <button className="xl:hidden text-2xl text-ink" onClick={() => setMobile(true)} aria-label="Menu">
               <Menu />
             </button>
-            <button onClick={() => navigate("/")} aria-label="Accueil HUWSTORE">
-              <img src={logoDark} alt="HUWSTORE" className="h-10 w-auto md:h-12" />
-            </button>
+            <nav className="hidden items-center gap-6 xl:flex">
+              {nav.map((n) => (
+                <button
+                  key={n.label}
+                  onClick={() => goToNavItem(n)}
+                  className="label-lux whitespace-nowrap text-anthracite transition-colors hover:text-gold-deep"
+                >
+                  {n.label}
+                </button>
+              ))}
+            </nav>
           </div>
 
-          {/* nav, centrée */}
-          <nav className="hidden items-center justify-center gap-7 lg:flex">
-            {nav.map((n) => (
-              <button
-                key={n.label}
-                onClick={() => goToNavItem(n)}
-                className="label-lux text-anthracite transition-colors hover:text-gold-deep"
-              >
-                {n.label}
-              </button>
-            ))}
-          </nav>
+          {/* logo, au centre */}
+          <button
+            onClick={() => navigate("/")}
+            aria-label="Accueil HUWSTORE"
+            className="justify-self-center"
+          >
+            <img src={logoDark} alt="HUWSTORE" className="h-10 w-auto md:h-12" />
+          </button>
 
           {/* icônes, à droite */}
-          <div className="flex items-center justify-end gap-5">
-            <div className="flex items-center gap-3.5 text-[1.2rem] text-ink">
-              <button
-                onClick={() => navigate("/boutique")}
-                aria-label="Rechercher dans la boutique"
-                className="transition-colors hover:text-gold-deep"
-              >
-                <Search />
-              </button>
-              <button
-                aria-label="Compte"
-                onClick={() => (user ? navigate("/compte") : setAuthOpen(true))}
-                className="relative hidden transition-colors hover:text-gold-deep sm:block"
-              >
-                <User />
-                {user && <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-gold" />}
-              </button>
-              <button
-                aria-label="Favoris"
-                onClick={() => (user ? navigate("/compte?tab=wishlist") : setAuthOpen(true))}
-                className="relative transition-colors hover:text-gold-deep"
-              >
-                <Heart />
-                {wishlist.length > 0 && (
-                  <span className="absolute -right-1.5 -top-1.5 grid h-4 w-4 place-items-center rounded-full bg-gold text-[0.55rem] font-semibold text-ink">
-                    {wishlist.length}
-                  </span>
-                )}
-              </button>
-              <button aria-label="Panier" onClick={() => setCartOpen(true)} className="relative transition-colors hover:text-gold-deep">
-                <Bag />
-                {count > 0 && (
-                  <span className="absolute -right-1.5 -top-1.5 grid h-4 w-4 place-items-center rounded-full bg-gold text-[0.55rem] font-semibold text-ink">
-                    {count}
-                  </span>
-                )}
-              </button>
-            </div>
+          <div className="flex items-center justify-end gap-3.5 justify-self-end text-[1.2rem] text-ink">
+            <button
+              onClick={() => navigate("/boutique")}
+              aria-label="Rechercher dans la boutique"
+              className="transition-colors hover:text-gold-deep"
+            >
+              <Search />
+            </button>
+            <button
+              aria-label="Compte"
+              onClick={() => (user ? navigate("/compte") : setAuthOpen(true))}
+              className="relative hidden transition-colors hover:text-gold-deep sm:block"
+            >
+              <User />
+              {user && <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-gold" />}
+            </button>
+            <button
+              aria-label="Favoris"
+              onClick={() => (user ? navigate("/compte?tab=wishlist") : setAuthOpen(true))}
+              className="relative transition-colors hover:text-gold-deep"
+            >
+              <Heart />
+              {wishlist.length > 0 && (
+                <span className="absolute -right-1.5 -top-1.5 grid h-4 w-4 place-items-center rounded-full bg-gold text-[0.55rem] font-semibold text-ink">
+                  {wishlist.length}
+                </span>
+              )}
+            </button>
+            <button aria-label="Panier" onClick={() => setCartOpen(true)} className="relative transition-colors hover:text-gold-deep">
+              <Bag />
+              {count > 0 && (
+                <span className="absolute -right-1.5 -top-1.5 grid h-4 w-4 place-items-center rounded-full bg-gold text-[0.55rem] font-semibold text-ink">
+                  {count}
+                </span>
+              )}
+            </button>
           </div>
         </div>
       </header>
@@ -176,7 +179,7 @@ export default function Header() {
 
       {/* Mobile drawer */}
       {mobile && (
-        <div className="fixed inset-0 z-50 lg:hidden">
+        <div className="fixed inset-0 z-50 xl:hidden">
           <div className="absolute inset-0 bg-ink/40" onClick={() => setMobile(false)} />
           <div className="absolute left-0 top-0 h-full w-[82%] max-w-sm bg-cream p-6 animate-slide-in">
             <div className="flex items-center justify-between">

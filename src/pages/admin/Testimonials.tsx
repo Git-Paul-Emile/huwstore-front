@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Card, PageHead, Btn, Input, Modal, ConfirmModal, useUI } from "../../components/admin/ui";
-import ImageField from "../../components/admin/ImageField";
 import {
   useTestimonials,
   useCreateTestimonial,
@@ -9,9 +8,6 @@ import {
 } from "../../hooks/useTestimonials";
 import type { Testimonial, TestimonialInput } from "../../api/testimonials";
 import { Plus, Edit, Trash } from "../../components/icons";
-
-const initials = (name: string) =>
-  name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join("");
 
 export default function Testimonials() {
   const { toast } = useUI();
@@ -52,22 +48,10 @@ export default function Testimonials() {
         {rows.map((t) => (
           <Card key={t.id} className="flex flex-col p-4">
             <div className="flex items-start justify-between gap-2">
-              <div className="flex items-center gap-3">
-                {t.avatar ? (
-                  <img src={t.avatar} alt={t.author} className="h-10 w-10 shrink-0 rounded-full object-cover" />
-                ) : (
-                  <span
-                    className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-xs font-semibold"
-                    style={{ background: "var(--adm-hover)", color: "var(--adm-text)" }}
-                  >
-                    {initials(t.author)}
-                  </span>
-                )}
-                <div>
-                  <p className="font-medium" style={{ color: "var(--adm-text)" }}>{t.author}</p>
-                  <p className="text-xs" style={{ color: "var(--adm-muted)" }}>{t.role}</p>
-                </div>
-              </div>
+              {/* La vitrine n'affiche que la parole et le nom : le back-office
+                  montre donc exactement ce que la cliente verra, sans photo ni
+                  mention que personne ne lira. */}
+              <p className="font-medium" style={{ color: "var(--adm-text)" }}>{t.author}</p>
               <button
                 onClick={() => toggle(t)}
                 title={t.active ? "Affiché sur le site" : "Masqué"}
@@ -127,18 +111,22 @@ function TestimonialForm({
   onSave: (input: TestimonialInput) => void;
 }) {
   const [author, setAuthor] = useState(initial?.author ?? "");
-  const [role, setRole] = useState(initial?.role ?? "");
   const [text, setText] = useState(initial?.text ?? "");
-  const [avatar, setAvatar] = useState(initial?.avatar ?? "");
   const [position, setPosition] = useState(initial?.position ?? 0);
   const [active, setActive] = useState(initial?.active ?? true);
 
+  /**
+   * `role` et `avatar` ne sont plus saisis : la vitrine ne les affiche plus.
+   * Les colonnes restent en base pour ne pas perdre ce qui y a deja ete
+   * enregistre, mais on renvoie des valeurs vides plutot que de laisser un
+   * champ que la boutique remplirait pour rien.
+   */
   const submit = () =>
     onSave({
       author: author.trim(),
-      role: role.trim(),
+      role: "",
       text: text.trim(),
-      avatar: avatar.trim() ? avatar.trim() : null,
+      avatar: null,
       position,
       active,
     });
@@ -148,10 +136,6 @@ function TestimonialForm({
       <label className="block text-sm">
         <span style={{ color: "var(--adm-muted)" }}>Nom de la cliente</span>
         <Input value={author} onChange={(e) => setAuthor(e.target.value)} className="mt-1.5" placeholder="Awa Diallo" />
-      </label>
-      <label className="mt-4 block text-sm">
-        <span style={{ color: "var(--adm-muted)" }}>Rôle / mention</span>
-        <Input value={role} onChange={(e) => setRole(e.target.value)} className="mt-1.5" placeholder="Cliente depuis 2021" />
       </label>
       <label className="mt-4 block text-sm">
         <span style={{ color: "var(--adm-muted)" }}>Témoignage</span>
@@ -164,15 +148,6 @@ function TestimonialForm({
           placeholder="Travailler avec HUWSTORE a tout changé…"
         />
       </label>
-      <div className="mt-4">
-        <ImageField
-          value={avatar}
-          onChange={setAvatar}
-          folder="temoignages"
-          fit="cover"
-          label="Photo (facultatif)"
-        />
-      </div>
       <div className="mt-4 flex items-end gap-4">
         <label className="block flex-1 text-sm">
           <span style={{ color: "var(--adm-muted)" }}>Position</span>
@@ -191,7 +166,7 @@ function TestimonialForm({
       </div>
       <div className="mt-6 flex justify-end gap-3">
         <Btn variant="ghost" onClick={onClose}>Annuler</Btn>
-        <Btn disabled={!author.trim() || !role.trim() || !text.trim()} onClick={submit}>
+        <Btn disabled={!author.trim() || !text.trim()} onClick={submit}>
           {initial ? "Enregistrer" : "Créer"}
         </Btn>
       </div>

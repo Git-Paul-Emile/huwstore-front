@@ -24,7 +24,7 @@ export function ProductCard({ p }: { p: Product }) {
     <article className="group flex h-full flex-col">
       <button
         onClick={() => navigate(`/produit/${p.id}`)}
-        className="relative block overflow-hidden bg-cream-tint aspect-[4/5] text-left"
+        className="relative block aspect-[4/5] overflow-hidden rounded-xl bg-cream-tint text-left"
       >
         <img
           src={p.image}
@@ -52,22 +52,30 @@ export function ProductCard({ p }: { p: Product }) {
           <Heart filled={wished} className={wished ? "text-gold" : ""} />
         </span>
       </button>
-      <div className="flex flex-1 flex-col pt-4">
-        <p className="label-lux text-taupe">{p.collection}</p>
+      {/* Texte centré sous le visuel : la vignette se lit alors comme une
+          étiquette posée sous la photo plutôt que comme un bloc de texte
+          aligné à gauche, et les cartes d'une même rangée restent lisibles
+          quelle que soit la longueur des noms. */}
+      <div className="flex flex-1 flex-col items-center pt-4 text-center">
+        {/* Pas de nom de collection au-dessus du titre : tous les articles
+            portent le même, il ne distingue donc rien et ne fait qu'éloigner
+            le nom du produit de sa photo. */}
         <button
           onClick={() => navigate(`/produit/${p.id}`)}
-          className="serif mt-1 line-clamp-2 min-h-[2.8rem] text-left text-lg leading-tight text-ink transition-colors hover:text-gold-deep"
+          className="serif line-clamp-2 min-h-[2.8rem] text-lg leading-tight text-ink transition-colors hover:text-gold-deep"
         >
           {p.name}
         </button>
-        <div className="mt-1.5 flex items-baseline gap-2.5">
-          <span className={`text-sm tracking-wide ${p.compareAt ? "text-bordeaux" : "text-anthracite"}`}>{fcfa(p.price)}</span>
+        {/* Prix barré AVANT le prix courant : l'œil lit d'abord ce qui a été
+            payé avant, puis ce qui est demandé aujourd'hui. */}
+        <div className="mt-1.5 flex items-baseline justify-center gap-2.5">
           {p.compareAt && <span className="text-xs text-taupe line-through">{fcfa(p.compareAt)}</span>}
+          <span className={`text-sm tracking-wide ${p.compareAt ? "text-bordeaux" : "text-anthracite"}`}>{fcfa(p.price)}</span>
         </div>
         <button
           onClick={() => defaultVariant && addToCart(p, defaultVariant)}
           disabled={soldOut}
-          className="label-lux mt-3 flex w-full items-center justify-center gap-2 bg-gold py-3 text-ink transition-all hover:bg-gold-deep active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-taupe-soft disabled:text-taupe"
+          className="label-lux mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-gold py-3 text-ink transition-all hover:bg-gold-deep active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-taupe-soft disabled:text-taupe"
         >
           <Bag className="text-base" />
           {soldOut ? "Épuisé" : "Ajouter au panier"}

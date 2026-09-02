@@ -1,6 +1,26 @@
 import { api, unwrap } from "./axiosConfig";
 
-export type BannerSlot = "Hero" | "Bandeau promo" | "Pop-up";
+/**
+ * Il ne reste qu'UN emplacement : le bandeau promotionnel de la page d'accueil.
+ *
+ * « Hero » et « Pop-up » ne sont plus proposés - le premier parce que le haut
+ * de l'accueil est devenu un bloc fixe écrit dans le code, le second parce
+ * qu'il ne s'affichait nulle part. Le serveur les refuse à la création ; ils
+ * restent dans le type pour que les bannières créées avant s'affichent encore
+ * dans la liste du back-office et puissent y être supprimées.
+ */
+export const BANNER_SLOTS = ["Bandeau promo"] as const;
+
+export type BannerSlot = (typeof BANNER_SLOTS)[number] | "Hero" | "Pop-up";
+
+/**
+ * Destination du bouton. « Page libre » : on saisit le chemin à la main
+ * (ctaHref). « Catégorie » / « Produit » : on choisit une cible du catalogue,
+ * le serveur en déduit ctaHref.
+ */
+export const BANNER_LINK_TYPES = ["Page libre", "Catégorie", "Produit"] as const;
+
+export type BannerLinkType = (typeof BANNER_LINK_TYPES)[number];
 
 export type Banner = {
   id: string;
@@ -9,11 +29,15 @@ export type Banner = {
   subtitle?: string;
   text?: string;
   ctaLabel?: string;
-  /** Toujours un chemin interne, ex. /boutique. */
+  linkType: BannerLinkType;
+  /** Renseigné quand linkType vaut « Catégorie ». */
+  linkCategoryId?: string;
+  /** Renseigné quand linkType vaut « Produit ». */
+  linkProductId?: string;
+  /** Chemin interne, calculé par le serveur d'après la destination choisie. */
   ctaHref?: string;
   slot: BannerSlot;
   target: "Toutes" | "Mobile" | "Desktop";
-  focus: "center" | "top" | "bottom";
   position: number;
   start: string;
   end: string;
@@ -21,7 +45,15 @@ export type Banner = {
   image: string;
 };
 
-export type BannerInput = Omit<Banner, "id">;
+/**
+ * À l'envoi, une seule piste de destination est renseignée selon `linkType` ;
+ * `null` sur les deux autres les détache côté serveur.
+ */
+export type BannerInput = Omit<Banner, "id" | "linkCategoryId" | "linkProductId" | "ctaHref"> & {
+  linkCategoryId?: string | null;
+  linkProductId?: string | null;
+  ctaHref?: string | null;
+};
 
 /**
  * `all` n'est utilisé que par le back-office : la vitrine ne reçoit que les

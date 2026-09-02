@@ -4,9 +4,10 @@ import { useProducts } from "../hooks/useProducts";
 import { useTestimonials } from "../hooks/useTestimonials";
 import { ProductCard } from "../components/Shared";
 import TestimonialCard from "../components/TestimonialCard";
-import HeroSlider from "../components/HeroSlider";
+import Hero from "../components/Hero";
 import PromoBanner from "../components/PromoBanner";
 import UniverseSlider from "../components/UniverseSlider";
+import CardRail from "../components/CardRail";
 import { ArrowRight, Leaf, Truck, Shield, MapPin } from "../components/icons";
 import { useSeo } from "../hooks/useSeo";
 
@@ -23,9 +24,45 @@ import { useSeo } from "../hooks/useSeo";
 const reassurance = [
   { icon: Leaf, title: "Toile, coton et PU", text: "Des matières choisies pour l'usage quotidien" },
   { icon: MapPin, title: "Partout au Sénégal", text: "Dakar, banlieue et régions" },
-  { icon: Truck, title: "Livraison rapide", text: "24 h sur Dakar, 72 h en région" },
+  { icon: Truck, title: "Livraison rapide", text: "24 h sur Dakar, sauf le dimanche" },
   { icon: Shield, title: "Paiement à la livraison", text: "Vous réglez en espèces à la remise du colis" },
 ];
+
+/**
+ * Vitesse du glissement CONTINU, en pixels par seconde. Le rail ne s'arrête
+ * pas sur chaque carte : il avance sans fin, et les produits reviennent en
+ * boucle.
+ *
+ * 70 px/s, soit une carte toutes les trois à quatre secondes environ sur un
+ * téléphone : le mouvement se remarque tout de suite, tout en laissant le
+ * temps de lire un nom et un prix au passage. Le survol (ou le toucher) met
+ * le rail en pause.
+ *
+ * Réservé aux « Meilleures ventes ». Les « Nouveautés » gardent un rail
+ * immobile : deux rangées qui glissent l'une sous l'autre sur le même écran
+ * se disputent le regard, et plus rien ne distingue alors la sélection que la
+ * boutique met en avant du reste du catalogue.
+ */
+const BEST_SELLERS_SCROLL_PX_PER_SECOND = 70;
+
+/**
+ * Les témoignages, eux, avancent d'une carte toutes les sept secondes au lieu
+ * de glisser sans fin : un texte de trois lignes qui se déplace pendant qu'on
+ * le lit ne se lit pas. Le mouvement continu convient à des vignettes qu'on
+ * regarde, pas à des phrases qu'on lit.
+ */
+const TESTIMONIAL_AUTOPLAY_MS = 7000;
+
+/**
+ * Largeur d'une case du rail produits. `basis-[62%]` sur mobile : la carte
+ * suivante dépasse d'un tiers, ce qui annonce qu'il y a d'autres produits à
+ * droite. Une case pleine largeur ne le dirait pas, et deux cases entières
+ * rendraient les photos trop petites pour juger d'un sac.
+ */
+const PRODUCT_SLIDE = "shrink-0 basis-[62%] snap-start px-1.5 sm:basis-1/2 lg:basis-1/3 xl:basis-1/4";
+
+/** Un témoignage à la fois sur mobile, le suivant amorcé sur le bord. */
+const TESTIMONIAL_SLIDE = "shrink-0 basis-[85%] snap-start px-1.5 sm:basis-1/2 lg:basis-1/3";
 
 export default function Home() {
   const navigate = useNavigate();
@@ -55,12 +92,12 @@ export default function Home() {
   useSeo({
     title: "HUWSTORE",
     description:
-      "Sacs et accessoires en toile, coton et cuir polyuréthane. Livraison 24 h sur Dakar, 72 h en région, paiement à la livraison.",
+      "Sacs et accessoires en toile, coton et cuir polyuréthane. Livraison 24 h sur Dakar sauf le dimanche, paiement à la livraison.",
   });
 
   return (
     <div>
-      <HeroSlider />
+      <Hero />
 
       {/* Réassurance */}
       <section className="border-b border-taupe/25">
@@ -93,6 +130,7 @@ export default function Home() {
           title="Meilleures ventes"
           products={bestSellers}
           onSeeAll={() => navigate("/boutique?sort=best")}
+          autoScroll
         />
       )}
 
@@ -101,20 +139,27 @@ export default function Home() {
         <ProductSection id="nouveautes" title="Nouveautés" products={newProducts} onSeeAll={() => navigate("/boutique")} last />
       )}
 
-      {/* Retours de clientes : contenu saisi depuis le back-office. */}
+      {/* Retours de clientes : contenu saisi depuis le back-office.
+
+          La bande occupe toute la largeur au lieu d'être une carte arrondie
+          posée dans la grille : elle marque une respiration entre les rangées
+          de produits et le pied de page, et le demi-ton beige suffit à la
+          séparer sans ajouter de bordure. */}
       {testimonials.length > 0 && (
-        <section className="mx-auto max-w-[1400px] px-5 md:px-10 py-14 md:py-20">
-          <div className="rounded-3xl bg-cream-tint px-5 py-12 sm:px-8 md:px-12 md:py-16">
-            <div className="mb-10 text-center md:mb-12">
-              <h2 className="serif text-[1.75rem] leading-tight sm:text-3xl md:text-4xl">
-                Les retours de nos <span className="italic text-gold-deep">clientes</span>
-              </h2>
-            </div>
-            <div className="grid gap-5 sm:gap-6 md:grid-cols-3">
-              {testimonials.map((t) => (
-                <TestimonialCard key={t.id} testimonial={t} />
-              ))}
-            </div>
+        <section aria-labelledby="temoignages" className="bg-cream-tint py-14 md:py-20">
+          <div className="mx-auto max-w-[1400px] px-5 md:px-10">
+            <h2 id="temoignages" className="serif mb-8 text-center text-[1.6rem] leading-tight sm:text-3xl md:mb-10 md:text-4xl">
+              Les retours de nos <span className="italic text-gold-deep">clientes</span>
+            </h2>
+
+            <CardRail
+              slides={testimonials.map((t) => <TestimonialCard key={t.id} testimonial={t} />)}
+              slideWidth={TESTIMONIAL_SLIDE}
+              label="Les retours de nos clientes"
+              autoplayMs={TESTIMONIAL_AUTOPLAY_MS}
+              previousLabel="Témoignages précédents"
+              nextLabel="Témoignages suivants"
+            />
           </div>
         </section>
       )}
@@ -122,35 +167,58 @@ export default function Home() {
   );
 }
 
-/** Deux rangées de produits identiques : une seule mise en page à maintenir. */
+/**
+ * Deux rangées de produits identiques : une seule mise en page à maintenir.
+ *
+ * Rangée défilante et non grille : sur un téléphone, une grille à deux colonnes
+ * n'affiche que quatre produits par écran et cache les suivants sous un long
+ * défilement vertical. Le rail en montre un et demi - la moitié visible dit
+ * qu'il y en a d'autres à droite - et laisse parcourir la sélection au doigt.
+ *
+ * `autoScroll` fait glisser le rail en continu et en boucle - une seule
+ * rangée de la page s'en sert. Le glissement s'arrête dès que la visiteuse
+ * s'en approche : survol de la souris, doigt posé dessus, focus clavier. Elle
+ * n'a donc jamais à courir après une carte pour la regarder ou l'ouvrir.
+ */
 function ProductSection({
   id,
   title,
   products,
   onSeeAll,
   last = false,
+  autoScroll = false,
 }: {
   id?: string;
   title: string;
   products: import("../data").Product[];
   onSeeAll: () => void;
   last?: boolean;
+  /** Vrai pour la rangée qui glisse toute seule, en boucle. */
+  autoScroll?: boolean;
 }) {
   return (
     <section id={id} className={`mx-auto max-w-[1400px] scroll-mt-24 px-5 md:px-10 ${last ? "pb-14 md:pb-20" : "py-14 md:py-20"}`}>
-      <div className="mb-8 flex items-end justify-between gap-4 md:mb-10">
-        <h2 className="serif text-[1.6rem] leading-tight sm:text-3xl md:text-4xl">{title}</h2>
+      <h2 className="serif mb-8 text-center text-[1.6rem] leading-tight sm:text-3xl md:mb-10 md:text-4xl">{title}</h2>
+
+      <CardRail
+        slides={products.map((p) => <ProductCard key={p.id} p={p} />)}
+        slideWidth={PRODUCT_SLIDE}
+        label={title}
+        continuousPxPerSecond={autoScroll ? BEST_SELLERS_SCROLL_PX_PER_SECOND : undefined}
+        previousLabel="Produits précédents"
+        nextLabel="Produits suivants"
+      />
+
+      {/* Le lien de sortie passe sous la rangée, centré : en haut à droite il
+          entrait en concurrence avec le titre, ici il se lit comme la suite
+          naturelle du parcours une fois la sélection vue. */}
+      <div className="mt-8 flex justify-center">
         <button
           onClick={onSeeAll}
-          className="label-lux hidden shrink-0 items-center gap-2 text-anthracite hover:text-gold-deep sm:inline-flex"
+          className="label-lux inline-flex items-center gap-2 border-b border-ink/25 pb-1 text-anthracite transition-colors hover:border-gold-deep hover:text-gold-deep"
         >
           Toute la boutique <ArrowRight />
         </button>
-      </div>
-      <div className="grid grid-cols-2 gap-x-3 gap-y-8 sm:gap-x-4 sm:gap-y-10 md:grid-cols-3 lg:grid-cols-4">
-        {products.map((p) => (
-          <ProductCard key={p.id} p={p} />
-        ))}
       </div>
     </section>
   );

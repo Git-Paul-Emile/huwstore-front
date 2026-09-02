@@ -6,7 +6,7 @@ import { useWishlist } from "../hooks/useWishlist";
 import { useSeo } from "../hooks/useSeo";
 import { cm, dimensionLabels, fcfa, grams, type ProductVariant } from "../data";
 import { ProductCard } from "../components/Shared";
-import { Heart, Bag, Truck, Shield, Plus, Minus, ChevronDown } from "../components/icons";
+import { Heart, Bag, Truck, Shield, Plus, Minus, ChevronDown, Play } from "../components/icons";
 
 function Accordion({ title, children, open: initial = false }: { title: string; children: React.ReactNode; open?: boolean }) {
   const [open, setOpen] = useState(initial);
@@ -43,6 +43,20 @@ function Swatch({ variant, selected, onSelect }: { variant: ProductVariant; sele
   );
 }
 
+/**
+ * Une case de la galerie. La vidéo en fait partie au même titre qu'une photo :
+ * reléguée dans une section à part, plus bas dans la page, elle passait
+ * inaperçue alors que c'est le média qui montre le mieux un sac.
+ */
+type GalleryItem = {
+  kind: "photo" | "video";
+  url: string;
+  alt: string;
+  /** Renseigné uniquement pour les photos rattachées à un coloris. */
+  colorSlug?: string;
+  colorName?: string;
+};
+
 export default function Product() {
   const navigate = useNavigate();
   const { id = "" } = useParams<{ id: string }>();
@@ -62,12 +76,46 @@ export default function Product() {
     return product.variants.find((v) => v.colorSlug === variantSlug) ?? product.variants.find((v) => v.available) ?? product.variants[0];
   }, [product, variantSlug]);
 
-  // La galerie affiche les photos du coloris choisi, puis les visuels communs.
-  const gallery = useMemo(() => {
+  /**
+   * Galerie complète : TOUT le média du produit y passe, dans un ordre qui
+   * garde le coloris choisi devant.
+   *
+   *   1. les photos du coloris choisi ;
+   *   2. les visuels communs (packshots, fiche technique, mises en situation) ;
+   *   3. la vidéo, s'il y en a une ;
+   *   4. les photos des AUTRES coloris.
+   *
+   * Le point 4 est ce qui manquait : la galerie s'arrêtait aux deux premiers
+   * groupes, si bien qu'un modèle dont chaque couleur n'a qu'une seule photo
+   * n'en montrait que deux, et que la moitié des photos fournies par la
+   * boutique n'était visible nulle part. Les photos d'un autre coloris restent
+   * en fin de liste et annoncent leur couleur sous l'image affichée : la
+   * visiteuse voit tout sans jamais croire que c'est la couleur qu'elle a
+   * choisie.
+   */
+  const gallery = useMemo<GalleryItem[]>(() => {
     if (!product) return [];
+
+    const photo = (image: { url: string; alt: string }, color?: { colorSlug: string; color: string }): GalleryItem => ({
+      kind: "photo",
+      url: image.url,
+      alt: image.alt,
+      colorSlug: color?.colorSlug,
+      colorName: color?.color,
+    });
+
     const variantUrls = new Set(product.variants.flatMap((v) => v.images.map((i) => i.url)));
-    const shared = product.images.filter((image) => !variantUrls.has(image.url));
-    return [...(variant?.images ?? []), ...shared];
+
+    return [
+      ...(variant ? variant.images.map((image) => photo(image, variant)) : []),
+      ...product.images.filter((image) => !variantUrls.has(image.url)).map((image) => photo(image)),
+      ...(product.videoUrl
+        ? [{ kind: "video" as const, url: product.videoUrl, alt: `${product.name} en vidéo` }]
+        : []),
+      ...product.variants
+        .filter((v) => v.colorSlug !== variant?.colorSlug)
+        .flatMap((v) => v.images.map((image) => photo(image, v))),
+    ];
   }, [product, variant]);
 
   // Appelé avant les retours anticipés : un hook ne peut pas être conditionnel.
@@ -138,32 +186,95 @@ export default function Product() {
         {/* Galerie */}
         <div className="flex flex-col-reverse gap-4 md:flex-row">
           <div className="flex gap-3 overflow-x-auto md:flex-col md:overflow-visible">
-            {gallery.map((image, i) => (
+            {gallery.map((item, i) => (
               <button
-                key={image.url}
+                key={item.url}
                 onClick={() => setActiveImage(i)}
-                className={`h-20 w-16 shrink-0 overflow-hidden bg-cream-tint transition-all md:h-24 md:w-20 ${
+                aria-label={item.kind === "video" ? "Voir la vidéo du produit" : item.alt}
+                className={`relative h-20 w-16 shrink-0 overflow-hidden rounded-lg bg-cream-tint transition-all md:h-24 md:w-20 ${
                   activeImage === i ? "ring-2 ring-gold ring-offset-2 ring-offset-cream" : "opacity-70 hover:opacity-100"
                 }`}
               >
-                <img src={image.url} alt={image.alt} loading="lazy" className="h-full w-full object-cover" />
+                {item.kind === "video" ? (
+                  // Pas de vignette extraite de la vidéo : on afficherait une
+                  // image que le navigateur doit d'abord télécharger en entier.
+                  // Un aplat sombre et un triangle disent la même chose, tout de
+                  // suite et sans un octet de plus.
+                  <span className="grid h-full w-full place-items-center bg-ink text-cream">
+                    <Play className="text-lg" />
+                  </span>
+                ) : (
+                  <img src={item.url} alt="" loading="lazy" className="h-full w-full object-cover" />
+                )}
               </button>
             ))}
           </div>
-          <div className="group relative flex-1 overflow-hidden bg-cream-tint">
-            <img
-              src={cover?.url}
-              alt={cover?.alt ?? product.imageAlt}
-              className="aspect-[4/5] w-full object-cover transition-transform duration-500 group-hover:scale-110"
-            />
-            {product.badge && (
-              <span
-                className={`label-lux absolute left-4 top-4 px-2.5 py-1 ${
-                  product.badge === "Nouveau" ? "bg-bordeaux text-cream" : product.badge === "Promo" ? "bg-gold text-ink" : "bg-ink/85 text-cream"
-                }`}
-              >
-                {product.badge}
-              </span>
+
+          <div className="flex-1">
+            <div className="group relative overflow-hidden rounded-xl bg-cream-tint">
+              {cover?.kind === "video" ? (
+                /*
+                 * Lecture immédiate, son coupé.
+                 *
+                 * Le son coupé n'est pas un détail de confort : les navigateurs
+                 * REFUSENT de lancer seule une vidéo qui a du son, faute de
+                 * quoi une page pourrait se mettre à parler sans qu'on lui ait
+                 * rien demandé. Une vidéo muette démarre, une vidéo sonore
+                 * reste figée sur sa première image - le `muted` est donc ce
+                 * qui rend le `autoPlay` possible, pas une option à côté.
+                 *
+                 * `muted` est posé sur l'élément lui-même et pas seulement en
+                 * attribut : React n'écrit pas toujours cet attribut au premier
+                 * rendu, et la vidéo partirait alors avec le son.
+                 *
+                 * Les commandes restent affichées : la visiteuse rétablit le
+                 * son quand elle le décide.
+                 */
+                <video
+                  key={cover.url}
+                  ref={(element) => {
+                    if (element) element.muted = true;
+                  }}
+                  src={cover.url}
+                  autoPlay
+                  muted
+                  controls
+                  playsInline
+                  preload="metadata"
+                  className="aspect-[4/5] w-full bg-ink object-contain"
+                />
+              ) : (
+                <img
+                  src={cover?.url}
+                  alt={cover?.alt ?? product.imageAlt}
+                  className="aspect-[4/5] w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                />
+              )}
+              {product.badge && (
+                <span
+                  className={`label-lux absolute left-4 top-4 px-2.5 py-1 ${
+                    product.badge === "Nouveau" ? "bg-bordeaux text-cream" : product.badge === "Promo" ? "bg-gold text-ink" : "bg-ink/85 text-cream"
+                  }`}
+                >
+                  {product.badge}
+                </span>
+              )}
+            </div>
+
+            {/* La photo affichée appartient à un autre coloris que celui
+                sélectionné : on le dit, et on propose de basculer. Sans cette
+                mention, la visiteuse croirait regarder la couleur qu'elle
+                s'apprête à commander. */}
+            {cover?.colorSlug && cover.colorSlug !== variant?.colorSlug && (
+              <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-taupe">
+                <span>Photo du coloris {cover.colorName}.</span>
+                <button
+                  onClick={() => selectVariant(cover.colorSlug!)}
+                  className="label-lux border-b border-gold-deep/40 pb-0.5 text-gold-deep transition-colors hover:border-gold-deep"
+                >
+                  Choisir ce coloris
+                </button>
+              </p>
             )}
           </div>
         </div>
@@ -317,20 +428,14 @@ export default function Product() {
 
             <Accordion title="Livraison &amp; paiement">
               Livraison à domicile ou retrait gratuit en point relais / boutique, partout au Sénégal : 24 h sur Dakar,
-              72 h en région. Les frais dépendent de la zone et sont offerts au-delà du seuil indiqué au panier. Le
+              sauf le dimanche. Pour les autres zones, le délai annoncé est celui affiché au panier. Les frais
+              dépendent de la zone et sont offerts au-delà du seuil indiqué au panier. Le
               règlement se fait en espèces à la remise du colis. Les retours et les échanges ne sont pas acceptés :
               vérifiez l'article devant la personne qui vous le remet.
             </Accordion>
           </div>
         </div>
       </div>
-
-      {product.videoUrl && (
-        <section className="mt-16">
-          <h2 className="serif mb-6 text-xl sm:text-2xl">Le produit en vidéo</h2>
-          <video src={product.videoUrl} controls playsInline preload="metadata" className="max-h-[70vh] w-full bg-cream-tint object-contain" />
-        </section>
-      )}
 
       {related.filter((p) => p.id !== product.id).length > 0 && (
         <section className="mt-16 md:mt-24">
