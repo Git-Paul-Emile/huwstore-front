@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { Card, PageHead, Pill, Btn, Input, Select, Modal, ConfirmModal, useUI } from "../../components/admin/ui";
+import { Card, PageHead, Pill, Btn, Input, Select, Modal, ConfirmModal, useAdminAction, useUI } from "../../components/admin/ui";
 import ImageField from "../../components/admin/ImageField";
 import type { Product } from "../../data";
 import {
@@ -41,6 +41,7 @@ const isLive = (banner: Banner) => {
 
 export default function Banners() {
   const { toast } = useUI();
+  const run = useAdminAction();
   const { data: banners = [], isLoading } = useAllBanners();
   const createBanner = useCreateBanner();
   const updateBanner = useUpdateBanner();
@@ -92,10 +93,10 @@ export default function Banners() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() =>
-                  updateBanner.mutate(
-                    { id: banner.id, input: { active: !banner.active } },
-                    { onSuccess: () => toast(banner.active ? "Campagne désactivée" : "Campagne activée") },
-                  )
+                  run(updateBanner, { id: banner.id, input: { active: !banner.active } }, {
+                    success: banner.active ? "Campagne désactivée" : "Campagne activée",
+                    failure: "La campagne n'a pas pu être modifiée.",
+                  })
                 }
                 aria-label={banner.active ? "Désactiver la campagne" : "Activer la campagne"}
                 className={`relative h-6 w-11 rounded-full transition-colors ${banner.active ? "bg-emerald-500" : ""}`}
@@ -151,9 +152,9 @@ export default function Banners() {
           confirmLabel="Supprimer"
           onClose={() => setConfirming(null)}
           onConfirm={() =>
-            removeBanner.mutate(confirming.id, {
-              onSuccess: () => toast("Campagne supprimée"),
-              onError: (error) => toast(readApiError(error, "Suppression impossible."), "error"),
+            run(removeBanner, confirming.id, {
+              success: "Campagne supprimée",
+              failure: "Suppression impossible.",
             })
           }
         />

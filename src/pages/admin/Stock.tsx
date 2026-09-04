@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Card, PageHead, Pill, Btn, Input, Select, Modal, useUI, th, td } from "../../components/admin/ui";
+import { Card, PageHead, Pill, Btn, Input, Select, Modal, useAdminAction, useUI, th, td } from "../../components/admin/ui";
 import { useAdjustStock, useStock, useStockMovements } from "../../hooks/useStock";
 import { exportStockCsv } from "../../api/stock";
 import { downloadBlob, stampedName } from "../../utils/download";
@@ -8,6 +8,7 @@ import { Download, Alert } from "../../components/icons";
 
 export default function Stock() {
   const { toast } = useUI();
+  const run = useAdminAction();
   const { data: stock = [] } = useStock();
   const { data: movements = [] } = useStockMovements();
   const adjustStock = useAdjustStock();
@@ -115,11 +116,17 @@ export default function Stock() {
           onClose={() => setAdjust(null)}
           onSave={(qty, reason) => {
             const delta = qty - adjustingRow.qty;
-            adjustStock.mutate(
+            // Le panneau ne se ferme qu'une fois l'ajustement accepté : un
+            // mouvement de stock refusé et invisible fausserait l'inventaire.
+            run(
+              adjustStock,
               { variantId: adjust, type: "Ajustement", qty: delta, reason, author: "Admin" },
-              { onSuccess: () => toast("Stock ajusté") },
+              {
+                success: "Stock ajusté",
+                failure: "Le stock n'a pas pu être ajusté.",
+                onSuccess: () => setAdjust(null),
+              },
             );
-            setAdjust(null);
           }}
         />
       )}

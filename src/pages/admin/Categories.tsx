@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Card, PageHead, Btn, Input, Textarea, ConfirmModal, Modal, useUI, th, td } from "../../components/admin/ui";
+import { Card, PageHead, Btn, Input, Textarea, ConfirmModal, Modal, useAdminAction, useUI, th, td } from "../../components/admin/ui";
 import ImageField from "../../components/admin/ImageField";
 import {
   useCategories,
@@ -24,6 +24,7 @@ import { Plus, Edit, Trash } from "../../components/icons";
  */
 export default function Categories() {
   const { toast } = useUI();
+  const run = useAdminAction();
   const { data: categories = [], isLoading } = useCategories();
   const createCategory = useCreateCategory();
   const updateCategory = useUpdateCategory();
@@ -78,10 +79,10 @@ export default function Categories() {
                     onBlur={(e) => {
                       const position = Number(e.target.value);
                       if (position === category.position) return;
-                      updateCategory.mutate(
-                        { id: category.id, input: { position } },
-                        { onSuccess: () => toast(`Ordre de « ${category.name} » mis à jour`) },
-                      );
+                      run(updateCategory, { id: category.id, input: { position } }, {
+                        success: `Ordre de « ${category.name} » mis à jour`,
+                        failure: "L'ordre n'a pas pu être enregistré.",
+                      });
                     }}
                   />
                 </td>
@@ -90,7 +91,7 @@ export default function Categories() {
                     <Btn variant="ghost" onClick={() => setEditing(category)}>
                       <Edit /> Modifier
                     </Btn>
-                    <Btn variant="ghost" onClick={() => setConfirming(category)}>
+                    <Btn variant="ghost" ariaLabel="Supprimer" onClick={() => setConfirming(category)}>
                       <Trash />
                     </Btn>
                   </div>
@@ -139,9 +140,9 @@ export default function Categories() {
           confirmLabel="Supprimer"
           onClose={() => setConfirming(null)}
           onConfirm={() =>
-            removeCategory.mutate(confirming.id, {
-              onSuccess: () => toast("Catégorie supprimée"),
-              onError: (error) => toast(readApiError(error, "Suppression impossible."), "error"),
+            run(removeCategory, confirming.id, {
+              success: "Catégorie supprimée",
+              failure: "Suppression impossible.",
             })
           }
         />

@@ -10,4 +10,5 @@ export const createDeliveryZone = (input: DeliveryZoneInput) => unwrap<Zone>(api
 export const updateDeliveryZone = (id: string, input: Partial<DeliveryZoneInput>) =>
   unwrap<Zone>(api.patch(`/delivery-zones/${id}`, input));
 
-export const deleteDeliveryZone = (id: string) => unwrap<null>(api.delete(`/delivery-zones/${id}`));
+export const deleteDeliveryZone = (id: string): Promise<void> =>
+  api.delete(`/delivery-zones/${id}`).then(() => undefined);

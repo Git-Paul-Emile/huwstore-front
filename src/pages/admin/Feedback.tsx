@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { Card, PageHead, Pill, Btn, ConfirmModal, useUI, th, td } from "../../components/admin/ui";
+import { Card, PageHead, Pill, Btn, ConfirmModal, useAdminAction, th, td } from "../../components/admin/ui";
 import { useFeedbacks, useMarkFeedbackRead, useDeleteFeedback } from "../../hooks/useFeedback";
 import type { Feedback } from "../../api/feedback";
 import { Trash, Check } from "../../components/icons";
 
 export default function FeedbackAdmin() {
-  const { toast } = useUI();
+  const run = useAdminAction();
   const { data: rows = [] } = useFeedbacks();
   const markRead = useMarkFeedbackRead();
   const deleteFeedback = useDeleteFeedback();
@@ -53,7 +53,11 @@ export default function FeedbackAdmin() {
                   <td className={td}>
                     <div className="flex justify-end gap-2">
                       {!f.read && (
-                        <Btn variant="ghost" onClick={() => markRead.mutate({ id: f.id, read: true })}>
+                        <Btn variant="ghost" onClick={() =>
+                            run(markRead, { id: f.id, read: true }, {
+                              failure: "L'avis n'a pas pu être marqué comme lu.",
+                            })
+                          }>
                           <Check /> Marquer lu
                         </Btn>
                       )}
@@ -81,7 +85,12 @@ export default function FeedbackAdmin() {
           title="Supprimer l'avis"
           message="Cet avis sera définitivement supprimé."
           confirmLabel="Supprimer"
-          onConfirm={() => deleteFeedback.mutate(removing.id, { onSuccess: () => toast("Avis supprimé") })}
+          onConfirm={() =>
+            run(deleteFeedback, removing.id, {
+              success: "Avis supprimé",
+              failure: "L'avis n'a pas pu être supprimé.",
+            })
+          }
           onClose={() => setRemoving(null)}
         />
       )}

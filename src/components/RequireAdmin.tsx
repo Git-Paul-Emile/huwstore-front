@@ -75,9 +75,10 @@ function AdminLogin() {
         <h1 className="serif mt-1 text-2xl">Back-office</h1>
         <p className="mt-2 text-sm text-taupe">Connectez-vous avec le compte de gestion de la boutique.</p>
 
-        <label className="mt-6 block text-sm">
-          <span className="text-taupe">Téléphone</span>
+        <div className="mt-6 text-sm">
+          <label htmlFor="admin-phone" className="block text-taupe">Téléphone</label>
           <input
+            id="admin-phone"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             autoComplete="username"
@@ -86,12 +87,16 @@ function AdminLogin() {
             required
             className="mt-1.5 w-full border border-taupe/40 px-3 py-2.5 text-sm outline-none focus:border-gold"
           />
-        </label>
+        </div>
 
-        <label className="mt-4 block text-sm">
-          <span className="text-taupe">Mot de passe</span>
+        {/* Le bouton afficher/masquer est un frère de l'input, PAS dans le
+            `<label>` : sinon son intitulé se collerait au nom accessible du
+            champ (« Mot de passe Afficher le mot de passe »). */}
+        <div className="mt-4 text-sm">
+          <label htmlFor="admin-password" className="block text-taupe">Mot de passe</label>
           <div className="relative mt-1.5">
             <input
+              id="admin-password"
               type={visible ? "text" : "password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -108,7 +113,7 @@ function AdminLogin() {
               {visible ? <EyeOff /> : <Eye />}
             </button>
           </div>
-        </label>
+        </div>
 
         {error && <p className="mt-4 text-sm text-rose-600">{error}</p>}
 

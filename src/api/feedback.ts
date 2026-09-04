@@ -26,4 +26,4 @@ export const getFeedbacks = () => unwrap<Feedback[]>(api.get("/feedback"));
 export const markFeedbackRead = (id: string, read: boolean) =>
   unwrap<Feedback>(api.patch(`/feedback/${id}`, { read }));
 
-export const deleteFeedback = (id: string) => unwrap<null>(api.delete(`/feedback/${id}`));
+export const deleteFeedback = (id: string): Promise<void> => api.delete(`/feedback/${id}`).then(() => undefined);

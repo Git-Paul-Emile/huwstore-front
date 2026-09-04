@@ -87,6 +87,13 @@ export default function Clients() {
                   <td className={td}><Pill tone={segTone(c.segment)}>{c.segment}</Pill></td>
                 </tr>
               ))}
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan={6} className={`${td} text-center`} style={{ color: "var(--adm-muted)" }}>
+                    Aucun client ne correspond à cette recherche.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

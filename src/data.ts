@@ -72,11 +72,14 @@ export type Category = {
   id: string;
   name: string;
   slug: string;
+  /** Visuel de repli saisi au back-office. Utilisé quand la catégorie n'a pas encore de produit. */
   image: string;
   /** Résumé affiché sous le nom sur la page d'accueil. Absent tant qu'il n'a pas été saisi. */
   description?: string | null;
   position?: number;
   _count?: { products: number };
+  /** Jusqu'à 4 photos de produits de la catégorie, pour composer la vignette « Nos univers ». */
+  preview?: ProductImage[];
 };
 
 export type Zone = { id: string; city: string; country: string; fee: number; freeFrom: number; delay: string; relay: boolean; active?: boolean };

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useAuthStore } from "../store/useAuthStore";
 import { useToastStore } from "../store/useToastStore";
 import { useLogin, useRegister } from "../hooks/useAuth";
@@ -58,11 +59,11 @@ export default function AuthModal() {
           {/* ---- CONNEXION ---- */}
           {mode === "login" && (
             <div className="space-y-5">
-              <Field label="Téléphone">
-                <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+221 77 123 45 67" className={inputCls} />
+              <Field id="auth-phone" label="Téléphone">
+                <input id="auth-phone" value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="username" placeholder="+221 77 123 45 67" className={inputCls} />
               </Field>
-              <Field label="Mot de passe">
-                <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
+              <Field id="auth-password" label="Mot de passe">
+                <PasswordInput id="auth-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
               </Field>
               <div className="flex items-center justify-between text-xs">
                 <label className="flex items-center gap-2 text-anthracite">
@@ -91,18 +92,38 @@ export default function AuthModal() {
           {mode === "register" && (
             <div className="space-y-5">
               <p className="text-sm text-taupe">Quelques infos suffisent - l'adresse vous sera demandée à la première commande.</p>
-              <Field label="Nom complet">
-                <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Awa Ndiaye" className={inputCls} />
+              <Field id="auth-name" label="Nom complet">
+                <input id="auth-name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" placeholder="Awa Ndiaye" className={inputCls} />
               </Field>
-              <Field label="Téléphone">
-                <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+221 77 123 45 67" className={inputCls} />
+              <Field id="auth-phone" label="Téléphone">
+                <input id="auth-phone" value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel" placeholder="+221 77 123 45 67" className={inputCls} />
               </Field>
-              <Field label="Mot de passe">
-                <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
+              <Field id="auth-password" label="Mot de passe">
+                <PasswordInput id="auth-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
               </Field>
+              {/* Les deux textes sont de VRAIS liens, et ils s'ouvrent dans un
+                  nouvel onglet.
+
+                  Demander d'accepter des conditions sans pouvoir les lire ne
+                  vaut pas acceptation : les libellés étaient jusqu'ici de
+                  simples `span` colorés en doré, donc rien du tout. Et le
+                  nouvel onglet n'est pas un détail de confort - ce panneau est
+                  posé par-dessus la page, une navigation dans le même onglet
+                  effacerait le nom, le téléphone et le mot de passe déjà
+                  saisis. */}
               <label className="flex items-start gap-2.5 text-xs text-anthracite">
                 <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 accent-gold" />
-                J'accepte les <span className="text-gold-deep">CGU</span> et la <span className="text-gold-deep">politique de confidentialité</span>.
+                <span>
+                  J'accepte les{" "}
+                  <Link to="/cgu" target="_blank" rel="noopener noreferrer" className="text-gold-deep underline underline-offset-2">
+                    conditions générales
+                  </Link>{" "}
+                  et la{" "}
+                  <Link to="/confidentialite" target="_blank" rel="noopener noreferrer" className="text-gold-deep underline underline-offset-2">
+                    politique de confidentialité
+                  </Link>
+                  .
+                </span>
               </label>
               <button
                 disabled={!name || !phone || password.length < 4 || !consent || registerMutation.isPending}
@@ -124,8 +145,8 @@ export default function AuthModal() {
               <Steps step={forgotStep} labels={["Vérification", "Nouveau mot de passe", "Terminé"]} />
               {forgotStep === 1 && (
                 <>
-                  <Field label="Téléphone (recommandé) ou e-mail">
-                    <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="77 123 45 67" className={inputCls} />
+                  <Field id="auth-recover" label="Téléphone (recommandé) ou e-mail">
+                    <input id="auth-recover" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="77 123 45 67" className={inputCls} />
                   </Field>
                   <p className="text-xs text-taupe">Un code de réinitialisation sera envoyé par SMS / WhatsApp.</p>
                   <button onClick={() => setForgotStep(2)} className={ctaCls}><span className="label-lux">Envoyer le code</span></button>
@@ -133,8 +154,8 @@ export default function AuthModal() {
               )}
               {forgotStep === 2 && (
                 <>
-                  <Field label="Nouveau mot de passe">
-                    <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
+                  <Field id="auth-new-password" label="Nouveau mot de passe">
+                    <PasswordInput id="auth-new-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
                   </Field>
                   <button disabled={password.length < 4} onClick={() => setForgotStep(3)} className={`${ctaCls} disabled:bg-taupe-soft disabled:text-taupe`}><span className="label-lux">Valider</span></button>
                 </>
@@ -167,12 +188,19 @@ export default function AuthModal() {
 const inputCls = "w-full border border-taupe/45 bg-cream px-4 py-3 text-sm outline-none transition-colors placeholder:text-taupe focus:border-gold";
 const ctaCls = "flex w-full items-center justify-center gap-2 bg-ink py-4 text-cream transition-colors hover:bg-anthracite active:scale-[0.99]";
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+/**
+ * Le `<label>` est associé par `htmlFor` et ne CONTIENT pas le champ : un champ
+ * mot de passe porte un bouton afficher/masquer, et l'envelopper collerait
+ * l'intitulé du bouton au nom accessible du champ.
+ */
+function Field({ id, label, children }: { id: string; label: string; children: React.ReactNode }) {
   return (
-    <label className="block">
-      <span className="label-lux text-[0.6rem] text-taupe">{label}</span>
+    <div>
+      <label htmlFor={id} className="label-lux block text-[0.6rem] text-taupe">
+        {label}
+      </label>
       <div className="mt-2">{children}</div>
-    </label>
+    </div>
   );
 }
 
@@ -183,10 +211,12 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
  * un échec de connexion.
  */
 function PasswordInput({
+  id,
   value,
   onChange,
   placeholder,
 }: {
+  id: string;
   value: string;
   onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   placeholder?: string;
@@ -195,10 +225,12 @@ function PasswordInput({
   return (
     <div className="relative">
       <input
+        id={id}
         type={visible ? "text" : "password"}
         value={value}
         onChange={onChange}
         placeholder={placeholder}
+        autoComplete={id === "auth-password" ? "current-password" : "new-password"}
         className={`${inputCls} pr-11`}
       />
       <button

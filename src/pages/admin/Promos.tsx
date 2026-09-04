@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { Card, PageHead, Pill, Btn, Input, Select, Modal, useUI, fcfa, th, td } from "../../components/admin/ui";
+import { Card, PageHead, Pill, Btn, Input, Select, Modal, useAdminAction, fcfa, th, td } from "../../components/admin/ui";
 import { useCreatePromo, usePromos, useUpdatePromo } from "../../hooks/usePromos";
 import type { Promo, PromoInput } from "../../api/promos";
 import { Plus } from "../../components/icons";
 
 export default function Promos() {
-  const { toast } = useUI();
+  const run = useAdminAction();
   const { data: rows = [] } = usePromos();
   const createPromo = useCreatePromo();
   const updatePromo = useUpdatePromo();
@@ -47,7 +47,14 @@ export default function Promos() {
                   </td>
                   <td className={td} style={{ color: "var(--adm-muted)" }}>{new Date(p.end).toLocaleDateString("fr-FR")}</td>
                   <td className={td}>
-                    <button onClick={() => updatePromo.mutate({ id: p.id, input: { active: !p.active } }, { onSuccess: () => toast("Code mis à jour") })}>
+                    <button
+                      onClick={() =>
+                        run(updatePromo, { id: p.id, input: { active: !p.active } }, {
+                          success: "Code mis à jour",
+                          failure: "Le code promo n'a pas pu être modifié.",
+                        })
+                      }
+                    >
                       <Pill tone={p.active ? "green" : "gray"}>{p.active ? "Actif" : "Inactif"}</Pill>
                     </button>
                   </td>
@@ -61,7 +68,13 @@ export default function Promos() {
       {open && (
         <PromoForm
           onClose={() => setOpen(false)}
-          onSave={(input) => createPromo.mutate(input, { onSuccess: () => { toast("Code promo créé"); setOpen(false); } })}
+          onSave={(input) =>
+            run(createPromo, input, {
+              success: "Code promo créé",
+              failure: "Le code promo n'a pas pu être créé.",
+              onSuccess: () => setOpen(false),
+            })
+          }
         />
       )}
     </div>

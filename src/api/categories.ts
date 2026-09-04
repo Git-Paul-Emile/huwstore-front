@@ -14,4 +14,5 @@ export const createCategory = (input: CategoryInput) => unwrap<Category>(api.pos
 export const updateCategory = (id: string, input: Partial<CategoryInput>) =>
   unwrap<Category>(api.patch(`/categories/${id}`, input));
 
-export const deleteCategory = (id: string) => unwrap<null>(api.delete(`/categories/${id}`));
+export const deleteCategory = (id: string): Promise<void> =>
+  api.delete(`/categories/${id}`).then(() => undefined);

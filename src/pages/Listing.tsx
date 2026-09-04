@@ -8,8 +8,9 @@ import { ChevronDown, Close, Plus, Minus, Menu, Search as SearchIcon } from "../
 import { useSeo } from "../hooks/useSeo";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
 
-type Sort = "featured" | "best" | "price-asc" | "price-desc" | "new";
-const SORTS: Sort[] = ["featured", "best", "new", "price-asc", "price-desc"];
+type Sort = "best" | "price-asc" | "price-desc" | "new";
+const SORTS: Sort[] = ["new", "best", "price-asc", "price-desc"];
+const DEFAULT_SORT: Sort = "new";
 const isSort = (value: string | null): value is Sort => SORTS.includes(value as Sort);
 
 function FilterGroup({ title, children, open: init = true }: { title: string; children: React.ReactNode; open?: boolean }) {
@@ -39,7 +40,7 @@ export default function Listing() {
   const [maxPrice, setMaxPrice] = useState<number | null>(null);
   const [sort, setSort] = useState<Sort>(() => {
     const fromUrl = searchParams.get("sort");
-    return isSort(fromUrl) ? fromUrl : "featured";
+    return isSort(fromUrl) ? fromUrl : DEFAULT_SORT;
   });
   const [page, setPage] = useState(1);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -75,10 +76,10 @@ export default function Listing() {
   // pour qu'un lien « Meilleures ventes » partagé depuis l'accueil ouvre la
   // boutique déjà triée.
   useEffect(() => {
-    const current = searchParams.get("sort") ?? "featured";
+    const current = searchParams.get("sort") ?? DEFAULT_SORT;
     if (current === sort) return;
     const next = new URLSearchParams(searchParams);
-    if (sort !== "featured") next.set("sort", sort);
+    if (sort !== DEFAULT_SORT) next.set("sort", sort);
     else next.delete("sort");
     setSearchParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -86,7 +87,7 @@ export default function Listing() {
 
   useEffect(() => {
     const fromUrl = searchParams.get("sort");
-    const next = isSort(fromUrl) ? fromUrl : "featured";
+    const next = isSort(fromUrl) ? fromUrl : DEFAULT_SORT;
     setSort((current) => (current === next ? current : next));
   }, [searchParams]);
 
@@ -276,9 +277,8 @@ export default function Listing() {
                 onChange={(e) => setSort(e.target.value as Sort)}
                 className="label-lux appearance-none border border-taupe/40 bg-transparent py-2.5 pl-4 pr-9 text-ink outline-none focus:border-gold"
               >
-                <option value="featured">Mise en avant</option>
-                <option value="best">Meilleures ventes</option>
                 <option value="new">Nouveautés</option>
+                <option value="best">Meilleures ventes</option>
                 <option value="price-asc">Prix croissant</option>
                 <option value="price-desc">Prix décroissant</option>
               </select>

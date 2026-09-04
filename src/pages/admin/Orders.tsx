@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Card, PageHead, Pill, Btn, Select, Modal, useUI, fcfa, th, td } from "../../components/admin/ui";
+import { Card, PageHead, Pill, Btn, Select, Modal, useAdminAction, useUI, fcfa, th, td } from "../../components/admin/ui";
 import { useOrderPage, useUpdateOrder } from "../../hooks/useOrders";
 import { exportOrdersCsv, type Order, type OrderStatus } from "../../api/orders";
 import { Download, Truck, Check } from "../../components/icons";
@@ -12,6 +12,7 @@ const statusTone = (s: OrderStatus) =>
 
 export default function Orders() {
   const { toast } = useUI();
+  const run = useAdminAction();
   const [pay, setPay] = useState("all");
   const [status, setStatus] = useState("all");
   const [page, setPage] = useState(1);
@@ -63,10 +64,10 @@ export default function Orders() {
     const i = flow.indexOf(o.status);
     if (i < 0 || i >= flow.length - 1) return;
     const next = flow[i + 1];
-    updateOrder.mutate(
-      { id: o.id, input: { status: next } },
-      { onSuccess: () => toast(`${o.id} → ${next}`) },
-    );
+    run(updateOrder, { id: o.id, input: { status: next } }, {
+      success: `${o.id} → ${next}`,
+      failure: "Le statut de la commande n'a pas pu être changé.",
+    });
   };
 
   return (
@@ -207,7 +208,12 @@ export default function Orders() {
               <span style={{ color: "var(--adm-muted)" }}>Transporteur / livreur</span>
               <Select
                 value={open.courier ?? "-"}
-                onChange={(e) => updateOrder.mutate({ id: open.id, input: { courier: e.target.value } })}
+                onChange={(e) =>
+                  run(updateOrder, { id: open.id, input: { courier: e.target.value } }, {
+                    success: "Livreur enregistré",
+                    failure: "Le livreur n'a pas pu être enregistré.",
+                  })
+                }
                 className="mt-1.5"
               >
                 <option>-</option><option>Livreur - Moussa</option><option>Livreur - Ibrahima</option><option>Retrait en point relais</option>

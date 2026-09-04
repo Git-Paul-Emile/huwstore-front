@@ -1,4 +1,6 @@
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useId, useState, type ReactNode } from "react";
+import type { UseMutationResult } from "@tanstack/react-query";
+import { readApiError } from "../../api/axiosConfig";
 import { Check, Alert, Close } from "../icons";
 
 export const fcfa = (n: number) => `${n.toLocaleString("fr-FR")} FCFA`;
@@ -12,6 +14,53 @@ export const useUI = () => {
   if (!c) throw new Error("useUI outside provider");
   return c;
 };
+
+/**
+ * Lance une écriture du back-office en garantissant qu'un échec se VOIT.
+ *
+ * Sans ce garde-fou, un `mutate()` dont on ne fournit que `onSuccess` échoue
+ * en silence : le serveur refuse, React Query enregistre l'erreur, et la
+ * boutique ne voit rien du tout. C'est ce qui faisait dire que la création de
+ * produit « ne passe pas » - elle passait, elle était refusée, et personne ne
+ * le disait. Le back renvoie pourtant un message précis (400 détaillée par
+ * champ, 409 sur un doublon) : il ne manquait qu'un endroit pour l'afficher.
+ *
+ * Toute écriture du back-office passe par ici. Un `mutate()` nu dans une page
+ * d'administration est un défaut, pas un raccourci.
+ */
+export function useAdminAction() {
+  const { toast } = useUI();
+
+  return function run<TData, TError, TVariables>(
+    mutation: UseMutationResult<TData, TError, TVariables, unknown>,
+    // `NoInfer` : le type des variables se déduit de la mutation, jamais de
+    // l'objet passé ici - sinon un littéral comme `type: "Ajustement"` est
+    // élargi en `string` et ne correspond plus à l'union attendue.
+    variables: NoInfer<TVariables>,
+    options: {
+      /** Message de confirmation. Absent = succès silencieux (ex. un interrupteur). */
+      success?: string;
+      /** Message de repli quand le serveur n'en fournit pas. */
+      failure: string;
+      /** Joué UNIQUEMENT en cas de succès : fermer un formulaire, vider un champ. */
+      onSuccess?: (data: TData) => void;
+      /** Joué en cas d'échec, en plus du message : rouvrir un panneau, par exemple. */
+      onFailure?: (message: string) => void;
+    },
+  ) {
+    mutation.mutate(variables as TVariables, {
+      onSuccess: (data) => {
+        if (options.success) toast(options.success);
+        options.onSuccess?.(data);
+      },
+      onError: (error) => {
+        const message = readApiError(error, options.failure);
+        toast(message, "error");
+        options.onFailure?.(message);
+      },
+    });
+  };
+}
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<Toast[]>([]);
@@ -86,10 +135,12 @@ export function Pill({ tone = "gray", children }: { tone?: keyof typeof pillStyl
 }
 
 export function Btn({
-  children, onClick, variant = "primary", type = "button", disabled, className = "",
+  children, onClick, variant = "primary", type = "button", disabled, className = "", ariaLabel,
 }: {
   children: ReactNode; onClick?: () => void; variant?: "primary" | "ghost" | "danger";
   type?: "button" | "submit"; disabled?: boolean; className?: string;
+  /** Requis quand le bouton n'a qu'une icône pour contenu. */
+  ariaLabel?: string;
 }) {
   const styles = {
     primary: "text-white hover:opacity-90",
@@ -101,6 +152,7 @@ export function Btn({
       type={type}
       onClick={onClick}
       disabled={disabled}
+      aria-label={ariaLabel}
       className={`inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all active:scale-[0.98] disabled:opacity-40 ${styles} ${className}`}
       style={
         variant === "primary"
@@ -155,16 +207,20 @@ export function Select(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
 export function Modal({
   title, children, onClose, wide,
 }: { title: string; children: ReactNode; onClose: () => void; wide?: boolean }) {
+  const titleId = useId();
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-[1px]" onClick={onClose} />
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
         className={`relative z-10 max-h-[88vh] w-full ${wide ? "max-w-2xl" : "max-w-md"} overflow-y-auto rounded-2xl border shadow-2xl animate-fade-up`}
         style={{ background: "var(--adm-surface)", borderColor: "var(--adm-border)" }}
       >
         <div className="flex items-center justify-between border-b px-5 py-4" style={{ borderColor: "var(--adm-border)" }}>
-          <h3 className="serif text-lg" style={{ color: "var(--adm-text)" }}>{title}</h3>
-          <button onClick={onClose} className="text-xl" style={{ color: "var(--adm-muted)" }}><Close /></button>
+          <h3 id={titleId} className="serif text-lg" style={{ color: "var(--adm-text)" }}>{title}</h3>
+          <button onClick={onClose} aria-label="Fermer" className="text-xl" style={{ color: "var(--adm-muted)" }}><Close /></button>
         </div>
         <div className="p-5">{children}</div>
       </div>

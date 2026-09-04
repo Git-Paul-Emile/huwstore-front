@@ -7,8 +7,13 @@ import type { Category } from "../data";
 /**
  * Bande « Nos univers », première section sous le bloc d'accueil.
  *
+ * Chaque tuile montre une COUVERTURE (`category.preview`, calculé par l'API) :
+ * l'image choisie pour l'univers au back-office si la boutique en a posé une,
+ * sinon une sélection de photos de produits réellement rattachés à l'univers.
+ * Le visuel de repli `category.image` ne sert que pour un univers encore vide.
+ *
  * Toute la mécanique de défilement vit dans `CardRail` : ce composant ne
- * décrit plus qu'une tuile d'univers et laisse le rail s'occuper du reste.
+ * décrit qu'une tuile et laisse le rail s'occuper du reste.
  */
 
 /** Durée d'affichage d'une carte avant le passage à la suivante. */
@@ -17,34 +22,18 @@ const AUTOPLAY_MS = 4500;
 /** Nombre de cartes fictives affichées pendant le chargement du catalogue. */
 const SKELETON_COUNT = 4;
 
-/** Classes communes à une case du rail : deux tuiles par écran, puis trois, puis quatre. */
-const SLIDE_WIDTH = "shrink-0 basis-1/2 snap-start px-1.5 lg:basis-1/3 xl:basis-1/4";
+/**
+ * Une case du rail : un peu plus d'une tuile visible sur mobile pour annoncer
+ * la suite, puis deux, trois, quatre.
+ */
+const SLIDE_WIDTH = "shrink-0 basis-[72%] snap-start px-1.5 sm:basis-1/2 lg:basis-1/3 xl:basis-1/4";
 
 /**
- * Habillage de la tuile, partagé avec son squelette de chargement : les deux
- * occupent exactement la même boîte, la bande ne saute donc pas au moment où
- * les catégories arrivent.
- *
- * Le fond est `cream-tint` et NON `cream` : les visuels d'univers sont des sacs
- * détourés sur fond transparent. Sur un fond identique à celui de la page, ils
- * flottaient dans le vide au lieu d'occuper une vignette - c'est ce qui donnait
- * à la bande son air d'affiche. Le beige un ton plus soutenu redonne un cadre à
- * l'objet, exactement comme le fait déjà la carte produit.
- *
- * `aspect-[3/4]` plutôt qu'une hauteur en pixels : toutes les tuiles du rail
- * ont alors la même hauteur, à toutes les largeurs d'écran, sans mesure JS.
+ * Boîte de la tuile, partagée avec le squelette : même format `4/5` que la
+ * carte produit, la bande garde donc la même hauteur à toutes les largeurs
+ * d'écran et ne saute pas quand les catégories arrivent.
  */
-const CARD_SHELL = "relative flex aspect-[3/4] flex-col overflow-hidden rounded-xl bg-cream-tint";
-
-/**
- * Boîte du visuel : le sac prend toute la place laissée libre au-dessus du nom.
- * `object-contain` et non `object-cover` : ces visuels sont des sacs détourés,
- * les rogner couperait les anses.
- */
-const THUMB_BOX = "min-h-0 w-full flex-1 object-contain p-4 pb-1";
-
-/** Typographie du nom de l'univers, partagée avec le squelette. */
-const CARD_TITLE = "serif text-[0.95rem] leading-tight sm:text-lg";
+const CARD_SHELL = "relative block aspect-[4/5] overflow-hidden rounded-xl bg-cream-tint";
 
 /** Chemin de la page boutique filtrée sur un univers. */
 const categoryPath = (category: Category) => `/boutique/${encodeURIComponent(category.name)}`;
@@ -60,10 +49,8 @@ export default function UniverseSlider() {
 
   return (
     <section aria-labelledby="nos-univers" className="mx-auto max-w-[1400px] px-5 pt-14 pb-6 md:px-10 md:pt-16 md:pb-8">
-      {/* Titre centré : c'est la composition retenue pour les trois bandes de
-          la page d'accueil, elles se lisent ainsi comme une même famille. */}
       <h2 id="nos-univers" className="serif mb-8 text-center text-[1.6rem] leading-tight sm:text-3xl md:mb-10 md:text-4xl">
-        Nos univers
+        Nos <span className="italic text-gold-deep">univers</span>
       </h2>
 
       <CardRail
@@ -91,52 +78,73 @@ export default function UniverseSlider() {
 function UniverseSkeleton() {
   return (
     <div className={CARD_SHELL} aria-hidden>
-      {/* Le pouls est en taupe et non en `cream-tint` : la tuile porte déjà
-          cette teinte, un squelette de la même couleur serait invisible. */}
-      <div className="m-4 mb-1 min-h-0 flex-1 animate-pulse rounded-md bg-taupe-soft/45" />
-      <div className={`${CARD_TITLE} mx-3.5 mb-4 w-2/3 animate-pulse rounded bg-taupe-soft/45`}>&nbsp;</div>
+      <div className="absolute inset-0 animate-pulse bg-taupe-soft/45" />
+      <div className="absolute inset-x-4 bottom-4 h-5 w-2/3 animate-pulse rounded bg-taupe-soft/60" />
     </div>
   );
 }
 
 /**
- * Une tuile d'univers : le visuel, puis le nom qui porte le lien.
+ * Une tuile d'univers.
  *
- * Toute la tuile est cliquable, mais la zone cliquable n'est pas un bloc
- * `onClick` posé sur l'article : c'est un vrai lien, étiré à la surface de la
- * tuile par un pseudo-élément. La différence n'est pas cosmétique - un lien
- * s'annonce comme tel aux lecteurs d'écran, s'atteint au clavier, s'ouvre dans
- * un nouvel onglet au clic du milieu et se copie par le menu contextuel, ce
- * qu'un gestionnaire de clic ne sait pas faire.
+ * Toute la tuile est cliquable, mais c'est un vrai lien étiré à sa surface par
+ * un pseudo-élément, pas un `onClick` sur le bloc : un lien s'annonce aux
+ * lecteurs d'écran, s'atteint au clavier, s'ouvre dans un nouvel onglet au clic
+ * du milieu et se copie par le menu contextuel.
  */
 function UniverseCard({ category }: { category: Category }) {
+  const covers = (category.preview ?? []).slice(0, 4);
+
   return (
-    <article className={`${CARD_SHELL} group transition-colors duration-300 hover:bg-taupe-soft/40`}>
-      {/* Visuel décoratif : le nom de l'univers est juste en dessous et porte
-          déjà le lien, un texte de remplacement le répéterait inutilement pour
-          les lecteurs d'écran. */}
-      <img
-        src={category.image}
-        alt=""
-        loading="lazy"
-        className={`${THUMB_BOX} transition-transform duration-500 group-hover:scale-[1.04]`}
-      />
+    <article className={`${CARD_SHELL} group`}>
+      <UniverseCover covers={covers} fallback={category.image} name={category.name} />
 
-      <div className="flex items-center justify-between gap-2 px-3.5 pb-4 pt-1">
-        <h3 className={`${CARD_TITLE} text-ink`}>
-          <Link
-            to={categoryPath(category)}
-            className="outline-none transition-colors after:absolute after:inset-0 after:rounded-xl after:content-[''] group-hover:text-gold-deep focus-visible:after:outline-2 focus-visible:after:outline-offset-2 focus-visible:after:outline-bordeaux"
-          >
-            {category.name}
-          </Link>
-        </h3>
+      {/* Voile sombre : il n'apparaît qu'en bas, là où se pose le nom, pour
+          garder la couverture lisible sans assombrir toute la photo. */}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-ink/85 via-ink/25 to-transparent" />
 
-        <ArrowRight
-          aria-hidden
-          className="shrink-0 text-sm text-gold-deep transition-transform duration-300 group-hover:translate-x-0.5"
-        />
-      </div>
+      <h3 className="serif absolute inset-x-0 bottom-0 p-4 text-lg leading-tight text-cream sm:text-xl">
+        <Link
+          to={categoryPath(category)}
+          className="outline-none after:absolute after:inset-0 after:rounded-xl after:content-[''] focus-visible:after:outline-2 focus-visible:after:outline-offset-2 focus-visible:after:outline-gold"
+        >
+          {category.name}
+        </Link>
+      </h3>
     </article>
+  );
+}
+
+/**
+ * La couverture : une mosaïque 2x2 quand l'univers a au moins quatre produits,
+ * une seule photo entre un et trois, et le visuel de repli quand il est encore
+ * vide. Les images sont décoratives (le nom porte déjà le lien) donc `alt=""`.
+ */
+function UniverseCover({ covers, fallback, name }: { covers: { url: string }[]; fallback: string; name: string }) {
+  const base = "h-full w-full min-h-0 min-w-0 object-cover transition-transform duration-500 group-hover:scale-[1.05]";
+
+  if (covers.length >= 4) {
+    return (
+      <div className="grid h-full w-full grid-cols-2 grid-rows-2 gap-px bg-cream-tint">
+        {covers.map((cover) => (
+          <img key={cover.url} src={cover.url} alt="" loading="lazy" className={base} />
+        ))}
+      </div>
+    );
+  }
+
+  if (covers.length >= 1) {
+    return <img src={covers[0].url} alt="" loading="lazy" className={base} />;
+  }
+
+  // Univers sans produit : le visuel de repli est un sac détouré, on le pose
+  // sur la vignette sans le rogner.
+  return (
+    <img
+      src={fallback}
+      alt={name}
+      loading="lazy"
+      className="h-full w-full object-contain p-6 transition-transform duration-500 group-hover:scale-[1.04]"
+    />
   );
 }

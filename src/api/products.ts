@@ -15,7 +15,7 @@ export type ProductFilters = {
   maxPrice?: number;
   search?: string;
   /** `best` classe par quantités réellement vendues, calculées côté serveur. */
-  sort?: "featured" | "best" | "price-asc" | "price-desc" | "new";
+  sort?: "best" | "price-asc" | "price-desc" | "new";
   page?: number;
   limit?: number;
   /** Vue admin : inclut les produits désactivés. */
@@ -105,4 +105,4 @@ export const createProduct = (input: ProductInput) => unwrap<Product>(api.post("
 
 export const updateProduct = (id: string, input: ProductUpdateInput) => unwrap<Product>(api.patch(`/products/${id}`, input));
 
-export const deleteProduct = (id: string) => unwrap<null>(api.delete(`/products/${id}`));
+export const deleteProduct = (id: string): Promise<void> => api.delete(`/products/${id}`).then(() => undefined);

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Card, PageHead, Btn, Input, Modal, ConfirmModal, useUI } from "../../components/admin/ui";
+import { Card, PageHead, Btn, Input, Modal, ConfirmModal, useAdminAction } from "../../components/admin/ui";
 import {
   useTestimonials,
   useCreateTestimonial,
@@ -10,7 +10,7 @@ import type { Testimonial, TestimonialInput } from "../../api/testimonials";
 import { Plus, Edit, Trash } from "../../components/icons";
 
 export default function Testimonials() {
-  const { toast } = useUI();
+  const run = useAdminAction();
   const { data: rows = [] } = useTestimonials();
   const createTestimonial = useCreateTestimonial();
   const updateTestimonial = useUpdateTestimonial();
@@ -20,19 +20,24 @@ export default function Testimonials() {
   const [removing, setRemoving] = useState<Testimonial | null>(null);
 
   const toggle = (t: Testimonial) =>
-    updateTestimonial.mutate(
-      { id: t.id, input: { active: !t.active } },
-      { onSuccess: () => toast(t.active ? "Témoignage masqué" : "Témoignage affiché") },
-    );
+    run(updateTestimonial, { id: t.id, input: { active: !t.active } }, {
+      success: t.active ? "Témoignage masqué" : "Témoignage affiché",
+      failure: "Le témoignage n'a pas pu être modifié.",
+    });
 
   const save = (input: TestimonialInput) => {
     if (editing === "new") {
-      createTestimonial.mutate(input, { onSuccess: () => { toast("Témoignage créé"); setEditing(null); } });
+      run(createTestimonial, input, {
+        success: "Témoignage créé",
+        failure: "Le témoignage n'a pas pu être créé.",
+        onSuccess: () => setEditing(null),
+      });
     } else if (editing) {
-      updateTestimonial.mutate(
-        { id: editing.id, input },
-        { onSuccess: () => { toast("Témoignage mis à jour"); setEditing(null); } },
-      );
+      run(updateTestimonial, { id: editing.id, input }, {
+        success: "Témoignage mis à jour",
+        failure: "Le témoignage n'a pas pu être enregistré.",
+        onSuccess: () => setEditing(null),
+      });
     }
   };
 
@@ -93,7 +98,12 @@ export default function Testimonials() {
           title="Supprimer le témoignage"
           message={`Le témoignage de ${removing.author} sera définitivement supprimé.`}
           confirmLabel="Supprimer"
-          onConfirm={() => deleteTestimonial.mutate(removing.id, { onSuccess: () => toast("Témoignage supprimé") })}
+          onConfirm={() =>
+            run(deleteTestimonial, removing.id, {
+              success: "Témoignage supprimé",
+              failure: "Le témoignage n'a pas pu être supprimé.",
+            })
+          }
           onClose={() => setRemoving(null)}
         />
       )}

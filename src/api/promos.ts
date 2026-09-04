@@ -20,7 +20,7 @@ export const createPromo = (input: PromoInput) => unwrap<Promo>(api.post("/promo
 
 export const updatePromo = (id: string, input: Partial<PromoInput>) => unwrap<Promo>(api.patch(`/promos/${id}`, input));
 
-export const deletePromo = (id: string) => unwrap<null>(api.delete(`/promos/${id}`));
+export const deletePromo = (id: string): Promise<void> => api.delete(`/promos/${id}`).then(() => undefined);
 
 /** Détail du montant renvoyé par la vérification d'un code. */
 export type PromoQuote = {

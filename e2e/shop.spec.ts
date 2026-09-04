@@ -5,9 +5,17 @@ import { test, expect } from "@playwright/test";
  * (`cd ../back && pnpm seed`). Contre un environnement distant : `E2E_BASE_URL`.
  */
 
+/**
+ * Première fiche RÉELLEMENT commandable : on filtre sur la présence du bouton
+ * « Ajouter au panier » (une fiche en rupture affiche « Épuisé »), sinon un
+ * produit de test laissé sans stock ferait échouer le scénario.
+ */
 async function firstProductCard(page: import("@playwright/test").Page) {
   await page.goto("/boutique");
-  const card = page.getByRole("article").first();
+  const card = page
+    .getByRole("article")
+    .filter({ has: page.getByRole("button", { name: "Ajouter au panier" }) })
+    .first();
   await card.waitFor({ state: "visible", timeout: 15_000 }).catch(() => {});
   return card;
 }

@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { Card, PageHead, Pill, Btn, Input, Select, Modal, ConfirmModal, useUI, fcfa, th, td } from "../../components/admin/ui";
+import { useEffect, useMemo, useState } from "react";
+import { Card, PageHead, Pill, Btn, Input, Select, Modal, ConfirmModal, useAdminAction, useUI, fcfa, th, td } from "../../components/admin/ui";
 import { useCategories } from "../../hooks/useCategories";
 import { useCreateProduct, useDeleteProduct, useProducts, useUpdateProduct } from "../../hooks/useProducts";
 import type { Product } from "../../data";
@@ -10,6 +10,8 @@ import { Plus, Edit, Copy, Archive, Search, Filter } from "../../components/icon
 
 export default function Products() {
   const { toast } = useUI();
+  // Toute écriture passe par là : un refus du serveur se voit toujours.
+  const run = useAdminAction();
   const { data: products = [] } = useProducts({ all: true, limit: 100 });
   const { data: categories = [] } = useCategories();
   const createProduct = useCreateProduct();
@@ -48,8 +50,13 @@ export default function Products() {
 
   const bulk = (action: "activate" | "deactivate" | "delete") => {
     for (const id of sel) {
-      if (action === "delete") deleteProduct.mutate(id);
-      else updateProduct.mutate({ id, input: { active: action === "activate" } });
+      if (action === "delete") {
+        run(deleteProduct, id, { failure: "Le produit n'a pas pu être supprimé." });
+      } else {
+        run(updateProduct, { id, input: { active: action === "activate" } }, {
+          failure: action === "activate" ? "Le produit n'a pas pu être activé." : "Le produit n'a pas pu être désactivé.",
+        });
+      }
     }
     toast(`${sel.length} produit(s) mis à jour`);
     setSel([]);
@@ -58,7 +65,8 @@ export default function Products() {
   const duplicate = (p: Product) => {
     const categoryId = categoryIdByName.get(p.category);
     if (!categoryId) return;
-    createProduct.mutate(
+    run(
+      createProduct,
       {
         name: `${p.name} (copie)`,
         collection: p.collection,
@@ -91,7 +99,10 @@ export default function Products() {
           stockThreshold: v.stock.threshold,
         })),
       },
-      { onSuccess: () => toast("Produit dupliqué (inactif, stock à zéro)") },
+      {
+        success: "Produit dupliqué (inactif, stock à zéro)",
+        failure: "Le produit n'a pas pu être dupliqué.",
+      },
     );
   };
 
@@ -187,18 +198,40 @@ export default function Products() {
       </Card>
 
       {editing && (
+        /*
+         * Le formulaire ne se ferme QU'APRÈS la réponse du serveur.
+         *
+         * Il se fermait auparavant dans la foulée de l'appel, sans attendre :
+         * quand le serveur refusait la fiche, la boutique voyait le panneau se
+         * fermer, aucun produit n'apparaissait, et tout ce qui venait d'être
+         * saisi était perdu - sans un mot d'explication. Le refus remonte
+         * maintenant DANS le formulaire, qui reste ouvert avec sa saisie.
+         */
         <ProductForm
           product={editing === "new" ? null : editing}
           categories={categories}
+          saving={createProduct.isPending || updateProduct.isPending}
           onClose={() => setEditing(null)}
-          onCreate={(input) => {
-            createProduct.mutate(input, { onSuccess: () => toast("Produit créé") });
-            setEditing(null);
-          }}
-          onUpdate={(input) => {
+          onCreate={(input, fail) =>
+            run(createProduct, input, {
+              success: "Produit créé",
+              failure: "Le produit n'a pas pu être créé.",
+              onSuccess: () => setEditing(null),
+              onFailure: fail,
+            })
+          }
+          onUpdate={(input, fail) => {
             if (editing === "new") return;
-            updateProduct.mutate({ id: editing.id, input }, { onSuccess: () => toast("Produit enregistré") });
-            setEditing(null);
+            run(
+              updateProduct,
+              { id: editing.id, input },
+              {
+                success: "Produit enregistré",
+                failure: "Le produit n'a pas pu être enregistré.",
+                onSuccess: () => setEditing(null),
+                onFailure: fail,
+              },
+            );
           }}
         />
       )}
@@ -210,8 +243,10 @@ export default function Products() {
           confirmLabel="Archiver"
           onClose={() => setArchiving(null)}
           onConfirm={() => {
-            updateProduct.mutate({ id: archiving.id, input: { active: false } });
-            toast("Produit archivé");
+            run(updateProduct, { id: archiving.id, input: { active: false } }, {
+              success: "Produit archivé",
+              failure: "Le produit n'a pas pu être archivé.",
+            });
           }}
         />
       )}
@@ -279,15 +314,18 @@ type DimensionKey = (typeof DIMENSION_FIELDS)[number]["key"];
 function ProductForm({
   product,
   categories,
+  saving,
   onClose,
   onCreate,
   onUpdate,
 }: {
   product: Product | null;
   categories: { id: string; name: string }[];
+  saving: boolean;
   onClose: () => void;
-  onCreate: (input: ProductInput) => void;
-  onUpdate: (input: ProductUpdateInput) => void;
+  /** `fail` affiche le refus du serveur dans le formulaire, qui reste ouvert. */
+  onCreate: (input: ProductInput, fail: (message: string) => void) => void;
+  onUpdate: (input: ProductUpdateInput, fail: (message: string) => void) => void;
 }) {
   const isEdit = product !== null;
 
@@ -296,6 +334,14 @@ function ProductForm({
   const [categoryId, setCategoryId] = useState(
     categories.find((c) => c.name === product?.category)?.id ?? categories[0]?.id ?? "",
   );
+
+  // Les catégories arrivent d'une requête : si elles n'étaient pas encore là au
+  // montage du formulaire, on cale la sélection sur la première dès qu'elles
+  // arrivent, plutôt que de laisser un `<select>` qui montre une catégorie mais
+  // dont la valeur est vide (« Il manque la catégorie » au clic).
+  useEffect(() => {
+    if (!isEdit && categoryId === "" && categories.length > 0) setCategoryId(categories[0].id);
+  }, [categories, categoryId, isEdit]);
   const [material, setMaterial] = useState(product?.material ?? "");
   const [price, setPrice] = useState(String(product?.price ?? ""));
   const [compareAt, setCompareAt] = useState(String(product?.compareAt ?? ""));
@@ -315,6 +361,7 @@ function ProductForm({
   // existant l'archive côté serveur (les commandes passées restent lisibles) ;
   // les quantités en stock, elles, se modifient depuis l'écran Stock.
   const [variants, setVariants] = useState<VariantDraft[]>(() => toDrafts(product));
+  const [serverError, setServerError] = useState<string | null>(null);
 
   const setVariant = (index: number, patch: Partial<VariantDraft>) =>
     setVariants((list) => list.map((v, i) => (i === index ? { ...v, ...patch } : v)));
@@ -322,21 +369,34 @@ function ProductForm({
   const priceNumber = Number(price);
   const compareNumber = Number(compareAt);
 
-  const variantsValid =
-    variants.length > 0 &&
-    variants.every((v) => v.color.trim() !== "" && /^#[0-9a-fA-F]{6}$/.test(v.hex)) &&
-    new Set(variants.map((v) => slugify(v.color))).size === variants.length;
+  /**
+   * Ce qui manque pour pouvoir enregistrer, en clair.
+   *
+   * Un bouton grisé sans explication est un cul-de-sac : la boutique ne peut
+   * pas deviner que c'est l'espace dans « 12 000 » qui bloque, ni qu'un
+   * coloris est resté sans nom. On liste donc les manques, et le bouton reste
+   * cliquable pour que le message apparaisse au clic.
+   */
+  const manques: string[] = [];
+  if (name.trim() === "") manques.push("le nom");
+  if (categoryId === "") manques.push("la catégorie");
+  if (material.trim() === "") manques.push("la matière");
+  if (description.trim() === "") manques.push("la description");
+  if (care.trim() === "") manques.push("les conseils d'entretien");
+  if (!Number.isInteger(priceNumber) || priceNumber <= 0) {
+    manques.push("un prix en chiffres entiers, sans espace ni virgule");
+  }
+  if (compareAt !== "" && !(compareNumber > priceNumber)) {
+    manques.push("un prix barré supérieur au prix de vente");
+  }
+  if (variants.length === 0) manques.push("au moins un coloris");
+  else if (!variants.every((v) => v.color.trim() !== "")) manques.push("le nom de chaque coloris");
+  else if (!variants.every((v) => /^#[0-9a-fA-F]{6}$/.test(v.hex))) manques.push("la teinte de chaque coloris");
+  else if (new Set(variants.map((v) => slugify(v.color))).size !== variants.length) {
+    manques.push("des coloris tous différents");
+  }
 
-  const valid =
-    name.trim() !== "" &&
-    categoryId !== "" &&
-    material.trim() !== "" &&
-    description.trim() !== "" &&
-    care.trim() !== "" &&
-    Number.isInteger(priceNumber) &&
-    priceNumber > 0 &&
-    (compareAt === "" || compareNumber > priceNumber) &&
-    variantsValid;
+  const valid = manques.length === 0;
 
   /** Champs communs à la création et à la mise à jour. */
   const commonFields = () => ({
@@ -361,7 +421,11 @@ function ProductForm({
   });
 
   const submit = () => {
-    if (!valid) return;
+    if (!valid) {
+      setServerError(`Il manque ${manques.join(", ")}.`);
+      return;
+    }
+    setServerError(null);
     if (isEdit) {
       onUpdate({
         ...commonFields(),
@@ -376,7 +440,7 @@ function ProductForm({
           images: v.images,
           stockThreshold: Number(v.stockThreshold ?? 3),
         })),
-      });
+      }, setServerError);
       return;
     }
     onCreate({
@@ -391,7 +455,7 @@ function ProductForm({
         stockQty: Number(v.stockQty ?? 0),
         stockThreshold: Number(v.stockThreshold ?? 3),
       })),
-    });
+    }, setServerError);
   };
 
   const labelStyle = { color: "var(--adm-muted)" } as const;
@@ -451,13 +515,16 @@ function ProductForm({
         <p className={sectionTitle} style={labelStyle}>Prix</p>
         <label className="block text-sm">
           <span style={labelStyle}>Prix (FCFA)</span>
-          <Input type="number" min={0} value={price} onChange={(e) => setPrice(e.target.value)} className="mt-1.5" />
+          {/* `text` + `inputMode` plutôt que `number` : le champ nombre avale
+              les espaces et la molette, et empêche de MONTRER « 12 000 » pour
+              le refuser. La validation ci-dessous s'en charge. */}
+          <Input type="text" inputMode="numeric" value={price} onChange={(e) => setPrice(e.target.value)} className="mt-1.5" />
         </label>
         <label className="block text-sm">
           <span style={labelStyle}>Prix barré (FCFA)</span>
           <Input
-            type="number"
-            min={0}
+            type="text"
+            inputMode="numeric"
             value={compareAt}
             onChange={(e) => setCompareAt(e.target.value)}
             className="mt-1.5"
@@ -624,15 +691,30 @@ function ProductForm({
           <Btn variant="ghost" onClick={() => setVariants((list) => [...list, emptyVariant()])}>
             <Plus /> Ajouter un coloris
           </Btn>
-          {!variantsValid && (
-            <p className="text-xs text-rose-500">Chaque coloris doit avoir un nom unique et une teinte valide.</p>
+          {manques.length > 0 && (
+            <p className="text-xs" style={{ color: "var(--adm-muted)" }}>
+              Il manque encore {manques.join(", ")}.
+            </p>
           )}
         </div>
       </div>
 
+      {/* Le refus du serveur s'affiche ICI, au-dessus des boutons, et le
+          formulaire garde sa saisie : la boutique corrige le champ fautif au
+          lieu de tout retaper. Le back renvoie un message par champ (400) ou
+          « cette valeur existe déjà » (409) - il ne manquait qu'un endroit
+          pour le lire. */}
+      {serverError && (
+        <p className="mt-6 rounded-lg border-l-2 border-rose-500 bg-rose-500/5 px-3 py-2.5 text-sm text-rose-600">
+          {serverError}
+        </p>
+      )}
+
       <div className="mt-6 flex justify-end gap-3">
         <Btn variant="ghost" onClick={onClose}>Annuler</Btn>
-        <Btn onClick={submit} disabled={!valid}>{isEdit ? "Enregistrer" : "Créer le produit"}</Btn>
+        <Btn onClick={submit} disabled={saving}>
+          {saving ? "Enregistrement…" : isEdit ? "Enregistrer" : "Créer le produit"}
+        </Btn>
       </div>
     </Modal>
   );

@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Card, PageHead, Pill, Btn, Input, useUI, fcfa } from "../../components/admin/ui";
+import { Card, PageHead, Pill, Btn, Input, useAdminAction, useUI, fcfa } from "../../components/admin/ui";
 import {
   useCreateDeliveryZone,
   useDeleteDeliveryZone,
@@ -29,6 +29,7 @@ const EMPTY: ShopSettings = {
 
 export default function Settings() {
   const { toast } = useUI();
+  const run = useAdminAction();
   const { data: settings } = useSettings();
   const updateSettings = useUpdateSettings();
 
@@ -202,7 +203,10 @@ export default function Settings() {
                     onBlur={(e) => {
                       const fee = Number(e.target.value);
                       if (fee !== zone.fee) {
-                        updateZone.mutate({ id: zone.id, input: { fee } }, { onSuccess: () => toast(`Frais ${zone.city} mis à jour`) });
+                        run(updateZone, { id: zone.id, input: { fee } }, {
+                          success: `Frais ${zone.city} mis à jour`,
+                          failure: "Les frais n'ont pas pu être enregistrés.",
+                        });
                       }
                     }}
                   />
@@ -217,7 +221,10 @@ export default function Settings() {
                     onBlur={(e) => {
                       const freeFrom = Number(e.target.value);
                       if (freeFrom !== zone.freeFrom) {
-                        updateZone.mutate({ id: zone.id, input: { freeFrom } }, { onSuccess: () => toast(`Seuil ${zone.city} mis à jour`) });
+                        run(updateZone, { id: zone.id, input: { freeFrom } }, {
+                          success: `Seuil ${zone.city} mis à jour`,
+                          failure: "Le seuil n'a pas pu être enregistré.",
+                        });
                       }
                     }}
                   />
@@ -228,7 +235,12 @@ export default function Settings() {
                   {zone.relay && <Pill tone="blue">Relais dispo</Pill>}
                 </div>
                 <button
-                  onClick={() => removeZone.mutate(zone.id, { onSuccess: () => toast(`Zone ${zone.city} supprimée`) })}
+                  onClick={() =>
+                    run(removeZone, zone.id, {
+                      success: `Zone ${zone.city} supprimée`,
+                      failure: "La zone n'a pas pu être supprimée.",
+                    })
+                  }
                   className="mt-2 text-xs text-rose-500 hover:underline"
                 >
                   Supprimer

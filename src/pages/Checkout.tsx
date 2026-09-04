@@ -367,6 +367,25 @@ export default function Checkout() {
               <span className="label-lux">{createOrder.isPending ? "Enregistrement…" : "Confirmer ma commande"}</span>
               <ArrowRight className="text-base transition-transform group-hover:translate-x-1" />
             </button>
+
+            {/* Nos conditions générales disent que passer commande vaut
+                acceptation : elles doivent donc être lisibles ICI, au moment
+                où l'on commande, et pas seulement au fond du pied de page.
+                Pas de case à cocher supplémentaire - une commande se passe
+                aussi sans compte, et une case de plus entre le panier et la
+                confirmation coûterait des ventes sans rien ajouter à ce que
+                cette phrase établit déjà. */}
+            <p className="mt-4 text-center text-xs leading-relaxed text-taupe">
+              En confirmant, vous acceptez nos{" "}
+              <Link to="/cgu" target="_blank" rel="noopener noreferrer" className="text-gold-deep underline underline-offset-2">
+                conditions générales
+              </Link>{" "}
+              et notre{" "}
+              <Link to="/confidentialite" target="_blank" rel="noopener noreferrer" className="text-gold-deep underline underline-offset-2">
+                politique de confidentialité
+              </Link>
+              .
+            </p>
           </div>
         </aside>
       </form>

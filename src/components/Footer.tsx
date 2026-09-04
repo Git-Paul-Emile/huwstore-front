@@ -26,7 +26,10 @@ const cols: { title: string; links: { label: string; to: string }[] }[] = [
   },
   {
     title: "Informations",
-    links: [{ label: "Politique de confidentialité", to: "/confidentialite" }],
+    links: [
+      { label: "Conditions générales", to: "/cgu" },
+      { label: "Politique de confidentialité", to: "/confidentialite" },
+    ],
   },
 ];
 

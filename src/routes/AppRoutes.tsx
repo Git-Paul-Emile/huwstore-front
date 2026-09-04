@@ -23,6 +23,7 @@ import NotFoundPage from "../pages/NotFoundPage";
  * donc jamais les 11 écrans d'administration.
  */
 const Account = lazy(() => import("../pages/Account"));
+const Cgu = lazy(() => import("../pages/legal/Cgu"));
 const Confidentialite = lazy(() => import("../pages/legal/Confidentialite"));
 const Contact = lazy(() => import("../pages/legal/Contact"));
 
@@ -75,6 +76,7 @@ export function AppRoutes() {
               </RequireAuth>
             }
           />
+          <Route path="cgu" element={<Cgu />} />
           <Route path="confidentialite" element={<Confidentialite />} />
           <Route path="contact" element={<Contact />} />
         </Route>

@@ -23,4 +23,4 @@ export const updateAddress = (id: string, input: Partial<AddressInput>) =>
 
 export const setDefaultAddress = (id: string) => unwrap<Address>(api.patch(`/addresses/${id}/default`));
 
-export const deleteAddress = (id: string) => unwrap<null>(api.delete(`/addresses/${id}`));
+export const deleteAddress = (id: string): Promise<void> => api.delete(`/addresses/${id}`).then(() => undefined);

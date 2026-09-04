@@ -20,4 +20,5 @@ export const createTestimonial = (input: TestimonialInput) =>
 export const updateTestimonial = (id: string, input: Partial<TestimonialInput>) =>
   unwrap<Testimonial>(api.patch(`/testimonials/${id}`, input));
 
-export const deleteTestimonial = (id: string) => unwrap<null>(api.delete(`/testimonials/${id}`));
+export const deleteTestimonial = (id: string): Promise<void> =>
+  api.delete(`/testimonials/${id}`).then(() => undefined);
