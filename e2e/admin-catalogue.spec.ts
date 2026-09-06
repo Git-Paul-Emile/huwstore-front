@@ -2,6 +2,13 @@ import { test, expect } from "@playwright/test";
 import { connexionAdmin, allerA, marque, messageAffiche, IMAGE_FIXTURE } from "./helpers";
 
 /**
+ * Une fiche produit sans visuel s'affiche en boutique avec une vignette vide :
+ * la photo est une donnée obligatoire du catalogue, pas un ornement. Les
+ * scénarios de création téléversent donc le fichier de test et attendent que
+ * l'envoi soit terminé avant de valider.
+ */
+
+/**
  * Gestion du catalogue depuis le back-office.
  *
  * Ces scénarios existent à cause d'un défaut réel : la création de produit
@@ -35,6 +42,11 @@ test.describe("Catalogue", () => {
     await panneau.getByLabel(/entretien/i).fill("Nettoyer avec un chiffon humide.");
     await panneau.getByLabel(/nom du coloris|couleur/i).first().fill("Noir");
 
+    // Photo du coloris : sans elle, l'enregistrement est bloqué. On attend que
+    // la vignette apparaisse, preuve que l'envoi Cloudinary est terminé.
+    await panneau.locator('input[type="file"][accept*="image"]').first().setInputFiles(IMAGE_FIXTURE);
+    await expect(panneau.locator('img[alt=""]').first()).toBeVisible({ timeout: 30_000 });
+
     await panneau.getByRole("button", { name: /créer le produit/i }).click();
 
     // Le message est la preuve que le serveur a répondu, dans un sens ou dans
@@ -49,7 +61,7 @@ test.describe("Catalogue", () => {
     expect(await messageAffiche(page, /archivé/i)).toMatch(/archivé/i);
   });
 
-  test("un formulaire incomplet dit ce qui manque, et ne se ferme pas", async ({ page }) => {
+  test("un formulaire incomplet signale chaque champ manquant, et ne se ferme pas", async ({ page }) => {
     await allerA(page, /produits/i);
     await page.getByRole("button", { name: /nouveau produit|ajouter un produit/i }).first().click();
 
@@ -57,12 +69,14 @@ test.describe("Catalogue", () => {
     await panneau.getByLabel("Nom", { exact: true }).fill("Fiche volontairement incomplète");
     await panneau.getByRole("button", { name: /créer le produit/i }).click();
 
-    // Ni fermeture silencieuse, ni bouton grisé sans explication : on nomme les
-    // champs manquants, sinon la boutique ne peut pas deviner ce qui bloque.
+    // Ni fermeture silencieuse, ni bouton grisé sans explication : le refus est
+    // annoncé en pied de formulaire ET chaque champ obligatoire porte son
+    // propre message, sinon la boutique ne peut pas deviner ce qui bloque.
     await expect(panneau).toBeVisible();
-    // `.last()` : le premier « Il manque… » est l'aide en direct, le second le
-    // refus affiché au clic. Les deux prouvent que l'écran ne se ferme pas en silence.
-    await expect(panneau.getByText(/il manque/i).last()).toBeVisible();
+    await expect(panneau.getByRole("alert")).toContainText(/champs obligatoires sont incomplets/i);
+    await expect(panneau.getByText(/la matière est requise/i)).toBeVisible();
+    await expect(panneau.getByText(/la description est requise/i)).toBeVisible();
+    await expect(panneau.getByText(/ajoutez au moins une photo/i).first()).toBeVisible();
   });
 
   test("un prix saisi avec un espace est refusé, et la saisie est conservée", async ({ page }) => {

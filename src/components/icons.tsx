@@ -111,6 +111,12 @@ export const Trash = (p: P) => (
   <svg {...base(p)}><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13h10l1-13M10 11v6M14 11v6" /></svg>
 );
 export const Check = (p: P) => (<svg {...base(p)}><path d="m5 12 5 5 9-11" /></svg>);
+/** Anneau qui tourne : indicateur de chargement d'une action en cours. */
+export const Spinner = (p: P) => (
+  <svg {...base(p)} className={`animate-spin ${p.className ?? ""}`}>
+    <path d="M12 3a9 9 0 1 0 9 9" />
+  </svg>
+);
 /** Triangle plein : il se lit comme un bouton de lecture, pas comme une flèche. */
 export const Play = (p: P) => (
   <svg {...base(p)} fill="currentColor" stroke="none"><path d="M8 5.5v13l11-6.5z" /></svg>

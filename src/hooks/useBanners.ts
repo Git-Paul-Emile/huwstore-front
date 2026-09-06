@@ -10,11 +10,11 @@ import {
 
 /** Vitrine : uniquement ce qui est réellement diffusable aujourd'hui. */
 export const useBanners = (slot?: BannerSlot) =>
-  useQuery({ queryKey: ["banners", { slot }], queryFn: () => getBanners({ slot }) });
+  useQuery({ queryKey: ["banners", { slot }], queryFn: () => getBanners({ slot }), staleTime: 2 * 60 * 1000 });
 
 /** Back-office : tout, y compris les campagnes passées et désactivées. */
 export const useAllBanners = () =>
-  useQuery({ queryKey: ["banners", { all: true }], queryFn: () => getBanners({ all: true }) });
+  useQuery({ queryKey: ["banners", { all: true }], queryFn: () => getBanners({ all: true }), staleTime: 2 * 60 * 1000 });
 
 function useBannerMutation<TVariables>(mutationFn: (variables: TVariables) => Promise<unknown>) {
   const queryClient = useQueryClient();

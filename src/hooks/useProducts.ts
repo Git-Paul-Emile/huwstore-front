@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createProduct,
   deleteProduct,
@@ -14,9 +14,19 @@ import type { Product } from "../data";
 
 const EMPTY: Product[] = [];
 
+/** Le catalogue bouge peu : deux minutes sans refetch automatique. */
+const CATALOG_STALE_MS = 2 * 60 * 1000;
+
 /** Page de produits + métadonnées de pagination. */
 export const useProductPage = (filters: ProductFilters = {}) =>
-  useQuery({ queryKey: ["products", filters], queryFn: () => getProducts(filters) });
+  useQuery({
+    queryKey: ["products", filters],
+    queryFn: () => getProducts(filters),
+    staleTime: CATALOG_STALE_MS,
+    // Changer un filtre ou de page garde la liste précédente affichée (grisée)
+    // au lieu de vider la grille pendant le chargement.
+    placeholderData: keepPreviousData,
+  });
 
 /**
  * Raccourci quand seule la liste compte (cartes, suggestions).
@@ -28,10 +38,16 @@ export const useProducts = (filters: ProductFilters = {}) =>
     queryKey: ["products", filters],
     queryFn: () => getProducts(filters),
     select: (page) => page.items ?? EMPTY,
+    staleTime: CATALOG_STALE_MS,
   });
 
 export const useProduct = (idOrSlug: string) =>
-  useQuery({ queryKey: ["products", "detail", idOrSlug], queryFn: () => getProduct(idOrSlug), enabled: !!idOrSlug });
+  useQuery({
+    queryKey: ["products", "detail", idOrSlug],
+    queryFn: () => getProduct(idOrSlug),
+    enabled: !!idOrSlug,
+    staleTime: CATALOG_STALE_MS,
+  });
 
 /** Matières et couleurs réellement présentes au catalogue. */
 export const useProductFacets = () =>

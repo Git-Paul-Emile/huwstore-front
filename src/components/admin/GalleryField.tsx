@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { useUploadImage } from "../../hooks/useUploadImage";
 import type { MediaFolder } from "../../api/media";
-import { Close, Plus } from "../icons";
+import { Close, Plus, Spinner } from "../icons";
 import { Btn } from "./ui";
 
 /**
@@ -18,11 +18,17 @@ export default function GalleryField({
   onChange,
   folder = "produits",
   label = "Photos",
+  onBusyChange,
 }: {
   images: string[];
   onChange: (images: string[]) => void;
   folder?: MediaFolder;
   label?: string;
+  /**
+   * Signale au formulaire parent qu'un envoi est en cours : il bloque alors
+   * l'enregistrement tant qu'une photo n'est pas arrivée sur Cloudinary.
+   */
+  onBusyChange?: (busy: boolean) => void;
 }) {
   const upload = useUploadImage();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -33,20 +39,24 @@ export default function GalleryField({
     if (!files || files.length === 0) return;
     setError(null);
     setPending(files.length);
+    onBusyChange?.(true);
 
     const uploaded: string[] = [];
+    let failure: string | null = null;
     for (const file of Array.from(files)) {
       try {
         const media = await upload.mutateAsync({ file, folder });
         uploaded.push(media.url);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Une image n'a pas pu être envoyée.");
+        failure = err instanceof Error ? err.message : "Une image n'a pas pu être envoyée.";
       } finally {
         setPending((count) => count - 1);
       }
     }
 
+    if (failure) setError(failure);
     if (uploaded.length > 0) onChange([...images, ...uploaded]);
+    onBusyChange?.(false);
   }
 
   const move = (from: number, to: number) => {
@@ -64,7 +74,8 @@ export default function GalleryField({
           {label} <span className="opacity-70">- la 1ʳᵉ est la photo principale, la 2ᵉ s'affiche au survol</span>
         </p>
         <Btn variant="ghost" onClick={() => inputRef.current?.click()} disabled={pending > 0}>
-          <Plus /> {pending > 0 ? `Envoi… (${pending})` : "Ajouter des photos"}
+          {pending > 0 ? <Spinner /> : <Plus />}
+          {pending > 0 ? `Envoi en cours… (${pending})` : "Ajouter des photos"}
         </Btn>
       </div>
 
@@ -113,14 +124,30 @@ export default function GalleryField({
           </div>
         ))}
 
-        {images.length === 0 && (
+        {/* Une tuile de chargement par fichier encore en route : la boutique voit
+            que l'envoi travaille, et à quel emplacement la photo va se poser. */}
+        {Array.from({ length: pending }).map((_, index) => (
+          <div
+            key={`pending-${index}`}
+            className="grid h-24 w-20 place-items-center rounded-lg border"
+            style={{ borderColor: "var(--adm-border)", background: "var(--adm-surface-2)", color: "var(--adm-muted)" }}
+          >
+            <Spinner className="text-lg" />
+          </div>
+        ))}
+
+        {images.length === 0 && pending === 0 && (
           <p className="text-xs" style={{ color: "var(--adm-muted)" }}>
             Aucune photo pour ce coloris.
           </p>
         )}
       </div>
 
-      {error && <p className="mt-1 text-[0.7rem] text-rose-500">{error}</p>}
+      {error && (
+        <p className="mt-2 rounded-lg border-l-2 border-rose-500 bg-rose-500/5 px-3 py-2 text-xs text-rose-600">
+          {error} La photo n'a pas été ajoutée : réessayez, le produit ne peut pas être enregistré sans elle.
+        </p>
+      )}
     </div>
   );
 }

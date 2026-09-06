@@ -4,7 +4,7 @@ import { useAdjustStock, useStock, useStockMovements } from "../../hooks/useStoc
 import { exportStockCsv } from "../../api/stock";
 import { downloadBlob, stampedName } from "../../utils/download";
 import { readApiError } from "../../api/axiosConfig";
-import { Download, Alert } from "../../components/icons";
+import { Download, Alert, Spinner } from "../../components/icons";
 
 export default function Stock() {
   const { toast } = useUI();
@@ -113,6 +113,7 @@ export default function Stock() {
         <AdjustModal
           name={adjustingRow.product}
           current={adjustingRow.qty}
+          busy={adjustStock.isPending}
           onClose={() => setAdjust(null)}
           onSave={(qty, reason) => {
             const delta = qty - adjustingRow.qty;
@@ -134,25 +135,46 @@ export default function Stock() {
   );
 }
 
-function AdjustModal({ name, current, onClose, onSave }: { name: string; current: number; onClose: () => void; onSave: (qty: number, reason: string) => void }) {
+function AdjustModal({
+  name,
+  current,
+  busy,
+  onClose,
+  onSave,
+}: {
+  name: string;
+  current: number;
+  /** `true` pendant l'appel serveur : le panneau reste ouvert, l'action est visible. */
+  busy: boolean;
+  onClose: () => void;
+  onSave: (qty: number, reason: string) => void;
+}) {
   const [qty, setQty] = useState(current);
   const [reason, setReason] = useState("");
   return (
-    <Modal title={`Ajuster le stock - ${name}`} onClose={onClose}>
+    <Modal title={`Ajuster le stock - ${name}`} onClose={busy ? () => undefined : onClose}>
       <label className="block text-sm">
         <span style={{ color: "var(--adm-muted)" }}>Nouvelle quantité en stock</span>
-        <Input type="number" value={qty} onChange={(e) => setQty(Number(e.target.value))} className="mt-1.5" />
+        <Input
+          type="number"
+          value={qty}
+          onChange={(e) => setQty(Number(e.target.value))}
+          disabled={busy}
+          className="mt-1.5"
+        />
       </label>
       <label className="mt-4 block text-sm">
         <span style={{ color: "var(--adm-muted)" }}>Motif (obligatoire)</span>
-        <Select value={reason} onChange={(e) => setReason(e.target.value)} className="mt-1.5">
+        <Select value={reason} onChange={(e) => setReason(e.target.value)} disabled={busy} className="mt-1.5">
           <option value="">Sélectionner…</option>
           <option>Inventaire physique</option><option>Casse</option><option>Retour client</option><option>Erreur de saisie</option><option>Réassort</option>
         </Select>
       </label>
       <div className="mt-6 flex justify-end gap-3">
-        <Btn variant="ghost" onClick={onClose}>Annuler</Btn>
-        <Btn onClick={() => onSave(qty, reason)} disabled={!reason || qty === current}>Valider l'ajustement</Btn>
+        <Btn variant="ghost" onClick={onClose} disabled={busy}>Annuler</Btn>
+        <Btn onClick={() => onSave(qty, reason)} disabled={busy || !reason || qty === current}>
+          {busy ? <><Spinner /> Enregistrement…</> : "Valider l'ajustement"}
+        </Btn>
       </div>
     </Modal>
   );

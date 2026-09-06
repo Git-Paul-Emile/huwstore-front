@@ -1,15 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
-import { Card, PageHead, Pill, Btn, Input, Select, Modal, ConfirmModal, useAdminAction, useUI, fcfa, th, td } from "../../components/admin/ui";
+import { Card, PageHead, Pill, Btn, Input, Select, Modal, ConfirmModal, useAdminAction, Req, FieldError, fcfa, th, td } from "../../components/admin/ui";
 import { useCategories } from "../../hooks/useCategories";
 import { useCreateProduct, useDeleteProduct, useProducts, useUpdateProduct } from "../../hooks/useProducts";
 import type { Product } from "../../data";
 import type { ProductInput, ProductUpdateInput } from "../../api/products";
 import GalleryField from "../../components/admin/GalleryField";
 import VideoField from "../../components/admin/VideoField";
-import { Plus, Edit, Copy, Archive, Search, Filter } from "../../components/icons";
+import ProductOptionsManager from "../../components/admin/ProductOptionsManager";
+import { useProductOptions } from "../../hooks/useProductOptions";
+import { Plus, Edit, Copy, Archive, Search, Filter, Spinner, Cog } from "../../components/icons";
 
 export default function Products() {
-  const { toast } = useUI();
   // Toute écriture passe par là : un refus du serveur se voit toujours.
   const run = useAdminAction();
   const { data: products = [] } = useProducts({ all: true, limit: 100 });
@@ -26,6 +27,7 @@ export default function Products() {
   const [sel, setSel] = useState<string[]>([]);
   const [editing, setEditing] = useState<Product | "new" | null>(null);
   const [archiving, setArchiving] = useState<Product | null>(null);
+  const [optionsOpen, setOptionsOpen] = useState(false);
 
   const statusOf = (p: Product) => (p.badge === "Rupture" ? "Rupture" : p.active === false ? "Inactif" : "Actif");
 
@@ -47,18 +49,27 @@ export default function Products() {
     setSort((s) => ({ key, dir: s.key === key && s.dir === 1 ? -1 : 1 }));
 
   const allSel = filtered.length > 0 && filtered.every((p) => sel.includes(p.id));
+  // Une action groupée en cours : on fige la barre de sélection le temps que le
+  // serveur réponde, sinon un double clic relance la même opération.
+  const bulkBusy = deleteProduct.isPending || updateProduct.isPending;
 
   const bulk = (action: "activate" | "deactivate" | "delete") => {
     for (const id of sel) {
       if (action === "delete") {
-        run(deleteProduct, id, { failure: "Le produit n'a pas pu être supprimé." });
+        // Chaque suppression rend compte d'elle-même : un produit déjà commandé
+        // est refusé (409) avec un message qui invite à l'archiver. Pas de
+        // « X produits mis à jour » global tant que le serveur n'a pas répondu.
+        run(deleteProduct, id, {
+          success: "Produit supprimé",
+          failure: "Le produit n'a pas pu être supprimé.",
+        });
       } else {
         run(updateProduct, { id, input: { active: action === "activate" } }, {
+          success: action === "activate" ? "Produit activé" : "Produit désactivé",
           failure: action === "activate" ? "Le produit n'a pas pu être activé." : "Le produit n'a pas pu être désactivé.",
         });
       }
     }
-    toast(`${sel.length} produit(s) mis à jour`);
     setSel([]);
   };
 
@@ -111,7 +122,12 @@ export default function Products() {
       <PageHead
         title="Produits"
         sub={`${products.length} références`}
-        action={<Btn onClick={() => setEditing("new")}><Plus /> Ajouter un produit</Btn>}
+        action={
+          <div className="flex flex-wrap gap-2">
+            <Btn variant="ghost" onClick={() => setOptionsOpen(true)}><Cog /> Matières et fermetures</Btn>
+            <Btn onClick={() => setEditing("new")}><Plus /> Ajouter un produit</Btn>
+          </div>
+        }
       />
 
       <Card className="mb-4 p-4">
@@ -134,9 +150,11 @@ export default function Products() {
       {sel.length > 0 && (
         <div className="mb-3 flex flex-wrap items-center gap-3 rounded-lg border px-4 py-3" style={{ borderColor: "var(--adm-border)", background: "var(--adm-surface)" }}>
           <span className="text-sm font-medium" style={{ color: "var(--adm-text)" }}><Filter /> {sel.length} sélectionné(s)</span>
-          <Btn variant="ghost" onClick={() => bulk("activate")}>Activer</Btn>
-          <Btn variant="ghost" onClick={() => bulk("deactivate")}>Désactiver</Btn>
-          <Btn variant="danger" onClick={() => bulk("delete")}>Supprimer</Btn>
+          <Btn variant="ghost" onClick={() => bulk("activate")} disabled={bulkBusy}>Activer</Btn>
+          <Btn variant="ghost" onClick={() => bulk("deactivate")} disabled={bulkBusy}>Désactiver</Btn>
+          <Btn variant="danger" onClick={() => bulk("delete")} disabled={bulkBusy}>
+            {deleteProduct.isPending ? <><Spinner /> Suppression…</> : "Supprimer"}
+          </Btn>
         </div>
       )}
 
@@ -241,15 +259,20 @@ export default function Products() {
           title="Archiver le produit"
           message={`Voulez-vous archiver « ${archiving.name} » ? Il sera masqué de la boutique.`}
           confirmLabel="Archiver"
+          busy={updateProduct.isPending}
           onClose={() => setArchiving(null)}
           onConfirm={() => {
             run(updateProduct, { id: archiving.id, input: { active: false } }, {
               success: "Produit archivé",
               failure: "Le produit n'a pas pu être archivé.",
+              onSuccess: () => setArchiving(null),
+              onFailure: () => setArchiving(null),
             });
           }}
         />
       )}
+
+      {optionsOpen && <ProductOptionsManager onClose={() => setOptionsOpen(false)} />}
     </div>
   );
 }
@@ -329,6 +352,13 @@ function ProductForm({
 }) {
   const isEdit = product !== null;
 
+  // Listes déroulantes gérées au back-office. Une fiche déjà enregistrée avec
+  // une valeur retirée de la liste garde cette valeur : on la réinjecte en tête
+  // du menu pour ne pas la perdre silencieusement à la prochaine sauvegarde.
+  const { data: productOptions } = useProductOptions();
+  const withCurrent = (labels: string[], current: string) =>
+    current && !labels.includes(current) ? [current, ...labels] : labels;
+
   const [name, setName] = useState(product?.name ?? "");
   const [collection, setCollection] = useState(product?.collection ?? "HUWSTORE");
   const [categoryId, setCategoryId] = useState(
@@ -363,40 +393,70 @@ function ProductForm({
   const [variants, setVariants] = useState<VariantDraft[]>(() => toDrafts(product));
   const [serverError, setServerError] = useState<string | null>(null);
 
+  // Envois de photos en cours, par coloris (clé = index). Tant qu'une entrée
+  // vaut `true`, une photo part encore sur Cloudinary et l'enregistrement est
+  // bloqué : sinon la fiche partait sans ses images.
+  const [galleryBusy, setGalleryBusy] = useState<Record<number, boolean>>({});
+  const uploading = Object.values(galleryBusy).some(Boolean);
+
+  // Les erreurs par champ n'apparaissent qu'après une première tentative
+  // d'envoi : un formulaire encore vierge ne doit pas être déjà tout rouge.
+  const [showErrors, setShowErrors] = useState(false);
+
   const setVariant = (index: number, patch: Partial<VariantDraft>) =>
     setVariants((list) => list.map((v, i) => (i === index ? { ...v, ...patch } : v)));
+
+  /** Retire un coloris et réaligne l'état d'envoi des photos sur les nouveaux index. */
+  const removeVariant = (index: number) => {
+    setVariants((list) => list.filter((_, i) => i !== index));
+    setGalleryBusy((busy) =>
+      Object.fromEntries(
+        Object.entries(busy)
+          .filter(([key]) => Number(key) !== index)
+          .map(([key, value]) => [Number(key) > index ? Number(key) - 1 : Number(key), value]),
+      ),
+    );
+  };
 
   const priceNumber = Number(price);
   const compareNumber = Number(compareAt);
 
   /**
-   * Ce qui manque pour pouvoir enregistrer, en clair.
-   *
-   * Un bouton grisé sans explication est un cul-de-sac : la boutique ne peut
-   * pas deviner que c'est l'espace dans « 12 000 » qui bloque, ni qu'un
-   * coloris est resté sans nom. On liste donc les manques, et le bouton reste
-   * cliquable pour que le message apparaisse au clic.
+   * Une erreur par champ, rendue SOUS le champ concerné une fois `showErrors`
+   * activé. Le bouton reste cliquable : c'est le clic qui révèle ce qui bloque,
+   * champ par champ, plutôt qu'un bouton grisé que la boutique ne sait pas
+   * déverrouiller.
    */
-  const manques: string[] = [];
-  if (name.trim() === "") manques.push("le nom");
-  if (categoryId === "") manques.push("la catégorie");
-  if (material.trim() === "") manques.push("la matière");
-  if (description.trim() === "") manques.push("la description");
-  if (care.trim() === "") manques.push("les conseils d'entretien");
+  const errors: Record<string, string> = {};
+  if (name.trim() === "") errors.name = "Le nom est requis.";
+  if (categoryId === "") errors.categoryId = "La catégorie est requise.";
+  if (material.trim() === "") errors.material = "La matière est requise.";
+  if (description.trim() === "") errors.description = "La description est requise.";
+  if (care.trim() === "") errors.care = "Les conseils d'entretien sont requis.";
   if (!Number.isInteger(priceNumber) || priceNumber <= 0) {
-    manques.push("un prix en chiffres entiers, sans espace ni virgule");
+    errors.price = "Un prix en chiffres entiers, sans espace ni virgule.";
   }
   if (compareAt !== "" && !(compareNumber > priceNumber)) {
-    manques.push("un prix barré supérieur au prix de vente");
+    errors.compareAt = "Le prix barré doit être supérieur au prix de vente.";
   }
-  if (variants.length === 0) manques.push("au moins un coloris");
-  else if (!variants.every((v) => v.color.trim() !== "")) manques.push("le nom de chaque coloris");
-  else if (!variants.every((v) => /^#[0-9a-fA-F]{6}$/.test(v.hex))) manques.push("la teinte de chaque coloris");
+  if (variants.length === 0) errors.variants = "Ajoutez au moins un coloris.";
   else if (new Set(variants.map((v) => slugify(v.color))).size !== variants.length) {
-    manques.push("des coloris tous différents");
+    errors.variants = "Deux coloris portent le même nom : donnez-leur des noms distincts.";
   }
 
-  const valid = manques.length === 0;
+  // Erreurs propres à chaque coloris, alignées sur l'index du tableau. La photo
+  // n'est pas un ornement : une fiche sans visuel s'affiche en boutique avec
+  // une vignette vide, la contrainte est aussi posée côté serveur.
+  const variantErrors = variants.map((v) => {
+    const e: { color?: string; hex?: string; images?: string } = {};
+    if (v.color.trim() === "") e.color = "Le nom du coloris est requis.";
+    if (!/^#[0-9a-fA-F]{6}$/.test(v.hex)) e.hex = "Teinte hexadécimale attendue, ex. #1a1a1a.";
+    if (v.images.length === 0) e.images = "Ajoutez au moins une photo à ce coloris.";
+    return e;
+  });
+
+  const valid =
+    Object.keys(errors).length === 0 && variantErrors.every((e) => Object.keys(e).length === 0);
 
   /** Champs communs à la création et à la mise à jour. */
   const commonFields = () => ({
@@ -421,8 +481,13 @@ function ProductForm({
   });
 
   const submit = () => {
+    setShowErrors(true);
+    if (uploading) {
+      setServerError("Une photo est encore en cours d'envoi. Attendez la fin de l'envoi avant d'enregistrer.");
+      return;
+    }
     if (!valid) {
-      setServerError(`Il manque ${manques.join(", ")}.`);
+      setServerError(null);
       return;
     }
     setServerError(null);
@@ -464,11 +529,22 @@ function ProductForm({
   return (
     <Modal title={isEdit ? "Éditer le produit" : "Nouveau produit"} onClose={onClose} wide>
       <div className="grid gap-4 md:grid-cols-2">
+        <p className="md:col-span-2 text-xs" style={labelStyle}>
+          Les champs suivis d'un astérisque<Req /> sont obligatoires.
+        </p>
         <p className={sectionTitle} style={labelStyle}>Informations générales</p>
 
         <label className="block text-sm md:col-span-2">
-          <span style={labelStyle}>Nom</span>
-          <Input value={name} onChange={(e) => setName(e.target.value)} className="mt-1.5" placeholder="Tote bag en toile de coton" />
+          <span style={labelStyle}>Nom<Req /></span>
+          <Input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            aria-required="true"
+            aria-invalid={showErrors && !!errors.name}
+            className="mt-1.5"
+            placeholder="Tote bag en toile de coton"
+          />
+          <FieldError>{showErrors ? errors.name : undefined}</FieldError>
         </label>
 
         <label className="block text-sm">
@@ -477,48 +553,85 @@ function ProductForm({
         </label>
 
         <label className="block text-sm">
-          <span style={labelStyle}>Catégorie</span>
-          <Select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className="mt-1.5">
+          <span style={labelStyle}>Catégorie<Req /></span>
+          <Select
+            value={categoryId}
+            onChange={(e) => setCategoryId(e.target.value)}
+            aria-required="true"
+            aria-invalid={showErrors && !!errors.categoryId}
+            className="mt-1.5"
+          >
             {categories.map((c) => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </Select>
+          <FieldError>{showErrors ? errors.categoryId : undefined}</FieldError>
         </label>
 
         <label className="block text-sm md:col-span-2">
-          <span style={labelStyle}>Matière</span>
-          <Input value={material} onChange={(e) => setMaterial(e.target.value)} className="mt-1.5" placeholder="Toile de coton" />
+          <span style={labelStyle}>Matière<Req /></span>
+          <Select
+            value={material}
+            onChange={(e) => setMaterial(e.target.value)}
+            aria-required="true"
+            aria-invalid={showErrors && !!errors.material}
+            className="mt-1.5"
+          >
+            <option value="" disabled>Choisir une matière…</option>
+            {withCurrent(productOptions?.matiere.map((o) => o.label) ?? [], material).map((label) => (
+              <option key={label} value={label}>{label}</option>
+            ))}
+          </Select>
+          <span className="mt-1 block text-[0.7rem]" style={labelStyle}>
+            Gérez cette liste avec « Matières et fermetures », en haut de l'écran.
+          </span>
+          <FieldError>{showErrors ? errors.material : undefined}</FieldError>
         </label>
 
         <label className="block text-sm md:col-span-2">
-          <span style={labelStyle}>Description</span>
+          <span style={labelStyle}>Description<Req /></span>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
+            aria-required="true"
+            aria-invalid={showErrors && !!errors.description}
             rows={4}
             className="mt-1.5 w-full rounded-lg border px-3 py-2 text-sm outline-none"
             style={{ borderColor: "var(--adm-border)", background: "var(--adm-surface)", color: "var(--adm-text)" }}
           />
+          <FieldError>{showErrors ? errors.description : undefined}</FieldError>
         </label>
 
         <label className="block text-sm md:col-span-2">
-          <span style={labelStyle}>Conseils d'entretien</span>
+          <span style={labelStyle}>Conseils d'entretien<Req /></span>
           <textarea
             value={care}
             onChange={(e) => setCare(e.target.value)}
+            aria-required="true"
+            aria-invalid={showErrors && !!errors.care}
             rows={3}
             className="mt-1.5 w-full rounded-lg border px-3 py-2 text-sm outline-none"
             style={{ borderColor: "var(--adm-border)", background: "var(--adm-surface)", color: "var(--adm-text)" }}
           />
+          <FieldError>{showErrors ? errors.care : undefined}</FieldError>
         </label>
 
         <p className={sectionTitle} style={labelStyle}>Prix</p>
         <label className="block text-sm">
-          <span style={labelStyle}>Prix (FCFA)</span>
+          <span style={labelStyle}>Prix (FCFA)<Req /></span>
           {/* `text` + `inputMode` plutôt que `number` : le champ nombre avale
               les espaces et la molette, et empêche de MONTRER « 12 000 » pour
               le refuser. La validation ci-dessous s'en charge. */}
-          <Input type="text" inputMode="numeric" value={price} onChange={(e) => setPrice(e.target.value)} className="mt-1.5" />
+          <Input
+            type="text"
+            inputMode="numeric"
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+            aria-required="true"
+            aria-invalid={showErrors && !!errors.price}
+            className="mt-1.5"
+          />
+          <FieldError>{showErrors ? errors.price : undefined}</FieldError>
         </label>
         <label className="block text-sm">
           <span style={labelStyle}>Prix barré (FCFA)</span>
@@ -527,18 +640,22 @@ function ProductForm({
             inputMode="numeric"
             value={compareAt}
             onChange={(e) => setCompareAt(e.target.value)}
+            aria-invalid={!!errors.compareAt}
             className="mt-1.5"
             placeholder="vide = aucune promotion"
           />
+          <FieldError>{errors.compareAt}</FieldError>
         </label>
-        {compareAt !== "" && compareNumber <= priceNumber && (
-          <p className="text-xs text-rose-500 md:col-span-2">Le prix barré doit être supérieur au prix de vente.</p>
-        )}
 
         <p className={sectionTitle} style={labelStyle}>Caractéristiques</p>
         <label className="block text-sm">
           <span style={labelStyle}>Fermeture</span>
-          <Input value={closure} onChange={(e) => setClosure(e.target.value)} className="mt-1.5" placeholder="Zippée" />
+          <Select value={closure} onChange={(e) => setClosure(e.target.value)} className="mt-1.5">
+            <option value="">Non précisée</option>
+            {withCurrent(productOptions?.fermeture.map((o) => o.label) ?? [], closure).map((label) => (
+              <option key={label} value={label}>{label}</option>
+            ))}
+          </Select>
         </label>
         <label className="block text-sm">
           <span style={labelStyle}>Poids (g)</span>
@@ -603,7 +720,7 @@ function ProductForm({
                   {!variant.id && <span style={labelStyle}> · nouveau</span>}
                 </span>
                 {variants.length > 1 && (
-                  <Btn variant="ghost" onClick={() => setVariants((list) => list.filter((_, i) => i !== index))}>
+                  <Btn variant="ghost" onClick={() => removeVariant(index)}>
                     {variant.id ? "Archiver" : "Retirer"}
                   </Btn>
                 )}
@@ -611,26 +728,30 @@ function ProductForm({
 
               {/* Nom : pleine largeur, jamais tronqué */}
               <label className="block text-sm">
-                <span style={labelStyle}>Nom du coloris</span>
+                <span style={labelStyle}>Nom du coloris<Req /></span>
                 <Input
                   value={variant.color}
                   onChange={(e) => setVariant(index, { color: e.target.value })}
+                  aria-required="true"
+                  aria-invalid={showErrors && !!variantErrors[index]?.color}
                   className="mt-1.5"
                   placeholder="Noir & marron"
                 />
                 {variant.color && (
                   <span className="mt-1 block text-xs" style={labelStyle}>Adresse : /{slugify(variant.color)}</span>
                 )}
+                <FieldError>{showErrors ? variantErrors[index]?.color : undefined}</FieldError>
               </label>
 
               {/* Contrôles compacts : ils passent à la ligne au lieu de se serrer */}
               <div className="flex flex-wrap items-start gap-x-6 gap-y-3">
                 <label className="block text-sm">
-                  <span className="block" style={labelStyle}>Teinte</span>
+                  <span className="block" style={labelStyle}>Teinte<Req /></span>
                   <input
                     type="color"
                     value={variant.hex}
                     onChange={(e) => setVariant(index, { hex: e.target.value })}
+                    aria-required="true"
                     className="mt-1.5 h-9 w-14 cursor-pointer rounded border"
                     style={{ borderColor: "var(--adm-border)" }}
                   />
@@ -674,12 +795,16 @@ function ProductForm({
                 </label>
               </div>
 
-              <GalleryField
-                images={variant.images}
-                onChange={(images) => setVariant(index, { images })}
-                folder="produits"
-                label={`Photos du coloris ${variant.color || index + 1}`}
-              />
+              <div>
+                <GalleryField
+                  images={variant.images}
+                  onChange={(images) => setVariant(index, { images })}
+                  folder="produits"
+                  label={`Photos du coloris ${variant.color || index + 1} *`}
+                  onBusyChange={(busy) => setGalleryBusy((state) => ({ ...state, [index]: busy }))}
+                />
+                <FieldError>{showErrors ? variantErrors[index]?.images : undefined}</FieldError>
+              </div>
 
               {variant.id && variants.length > 1 && (
                 <p className="text-xs" style={labelStyle}>
@@ -691,11 +816,7 @@ function ProductForm({
           <Btn variant="ghost" onClick={() => setVariants((list) => [...list, emptyVariant()])}>
             <Plus /> Ajouter un coloris
           </Btn>
-          {manques.length > 0 && (
-            <p className="text-xs" style={{ color: "var(--adm-muted)" }}>
-              Il manque encore {manques.join(", ")}.
-            </p>
-          )}
+          <FieldError>{showErrors ? errors.variants : undefined}</FieldError>
         </div>
       </div>
 
@@ -704,16 +825,25 @@ function ProductForm({
           lieu de tout retaper. Le back renvoie un message par champ (400) ou
           « cette valeur existe déjà » (409) - il ne manquait qu'un endroit
           pour le lire. */}
-      {serverError && (
-        <p className="mt-6 rounded-lg border-l-2 border-rose-500 bg-rose-500/5 px-3 py-2.5 text-sm text-rose-600">
-          {serverError}
+      {(serverError || (showErrors && !valid)) && (
+        <p
+          role="alert"
+          className="mt-6 rounded-lg border-l-2 border-rose-500 bg-rose-500/5 px-3 py-2.5 text-sm text-rose-600"
+        >
+          {serverError ?? "Des champs obligatoires sont incomplets : ils sont signalés en rouge ci-dessus."}
         </p>
       )}
 
       <div className="mt-6 flex justify-end gap-3">
         <Btn variant="ghost" onClick={onClose}>Annuler</Btn>
-        <Btn onClick={submit} disabled={saving}>
-          {saving ? "Enregistrement…" : isEdit ? "Enregistrer" : "Créer le produit"}
+        <Btn onClick={submit} disabled={saving || uploading}>
+          {saving
+            ? "Enregistrement…"
+            : uploading
+              ? "Envoi des photos…"
+              : isEdit
+                ? "Enregistrer"
+                : "Créer le produit"}
         </Btn>
       </div>
     </Modal>

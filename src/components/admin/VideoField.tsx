@@ -82,7 +82,11 @@ export default function VideoField({
           <p className="mt-2 text-[0.7rem]" style={{ color: "var(--adm-muted)" }}>
             {hint ?? "MP4 ou WebM, 40 Mo maximum. Videz pour retirer la vidéo."}
           </p>
-          {error && <p className="mt-1 text-[0.7rem] text-rose-500">{error}</p>}
+          {error && (
+            <p className="mt-2 rounded-lg border-l-2 border-rose-500 bg-rose-500/5 px-3 py-2 text-xs text-rose-600">
+              {error}
+            </p>
+          )}
         </div>
       </div>
     </div>

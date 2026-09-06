@@ -7,7 +7,8 @@ import {
   type TestimonialInput,
 } from "../api/testimonials";
 
-export const useTestimonials = () => useQuery({ queryKey: ["testimonials"], queryFn: getTestimonials });
+export const useTestimonials = () =>
+  useQuery({ queryKey: ["testimonials"], queryFn: getTestimonials, staleTime: 5 * 60 * 1000 });
 
 export function useCreateTestimonial() {
   const queryClient = useQueryClient();

@@ -42,7 +42,6 @@ export default function Footer() {
     { label: "Instagram", href: shop.instagramUrl },
     { label: "Facebook", href: shop.facebookUrl },
     { label: "TikTok", href: shop.tiktokUrl },
-    { label: "WhatsApp", href: shop.whatsapp ? `https://wa.me/${shop.whatsapp}` : undefined },
   ].filter((social): social is { label: string; href: string } => Boolean(social.href));
 
   return (
@@ -54,14 +53,6 @@ export default function Footer() {
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-cream/65">
               Alliez style et praticité au quotidien. Livraison partout au Sénégal, paiement à la livraison.
             </p>
-            {shop.phone && (
-              <a
-                href={`tel:+${shop.whatsapp || shop.phone}`}
-                className="mt-4 inline-block text-sm text-cream/70 transition-colors hover:text-gold"
-              >
-                {shop.phone}
-              </a>
-            )}
           </div>
 
           {cols.map((c) => (
@@ -80,12 +71,9 @@ export default function Footer() {
           ))}
         </div>
 
-        <div className="mt-14 flex flex-col gap-4 border-t border-cream/15 pt-6 text-xs text-cream/50 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-14 flex flex-col items-center gap-4 border-t border-cream/15 pt-6 text-center text-xs text-cream/50">
           <p>
-            © {new Date().getFullYear()} {shop.shopName} - Tous droits réservés.{" "}
-            <Link to="/admin" className="text-cream/40 transition-colors hover:text-gold">
-              - Espace admin
-            </Link>
+            © {new Date().getFullYear()} {shop.shopName} - Tous droits réservés.
           </p>
           <div className="flex gap-5">
             {socials.map((social) => (

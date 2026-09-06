@@ -1,7 +1,7 @@
 import { createContext, useContext, useId, useState, type ReactNode } from "react";
 import type { UseMutationResult } from "@tanstack/react-query";
 import { readApiError } from "../../api/axiosConfig";
-import { Check, Alert, Close } from "../icons";
+import { Check, Alert, Close, Spinner } from "../icons";
 
 export const fcfa = (n: number) => `${n.toLocaleString("fr-FR")} FCFA`;
 
@@ -167,6 +167,33 @@ export function Btn({
   );
 }
 
+/**
+ * Astérisque des champs obligatoires. Décoratif pour les lecteurs d'écran : le
+ * caractère obligatoire est porté par `aria-required` sur le champ lui-même, et
+ * une légende rappelle la convention en tête de formulaire.
+ */
+export function Req() {
+  return <span aria-hidden="true" className="text-rose-500"> *</span>;
+}
+
+/**
+ * Message d'erreur affiché SOUS son champ, avec une icône : l'information ne
+ * repose jamais sur la seule couleur (rules/30-produit/ui.md). Ne rend rien
+ * quand il n'y a pas d'erreur, pour rester posable partout sans condition.
+ *
+ * Pas de `role="alert"` ici : le champ porte `aria-invalid` et un seul résumé
+ * `role="alert"` en pied de formulaire annonce le refus. Multiplier les alertes
+ * simultanées les rend inaudibles.
+ */
+export function FieldError({ children }: { children?: string | null }) {
+  if (!children) return null;
+  return (
+    <span className="mt-1 flex items-center gap-1 text-xs text-rose-600">
+      <Alert /> {children}
+    </span>
+  );
+}
+
 export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
   const { className = "", ...rest } = props;
   return (
@@ -229,14 +256,34 @@ export function Modal({
 }
 
 export function ConfirmModal({
-  title, message, confirmLabel = "Confirmer", onConfirm, onClose,
-}: { title: string; message: string; confirmLabel?: string; onConfirm: () => void; onClose: () => void }) {
+  title, message, confirmLabel = "Confirmer", onConfirm, onClose, busy,
+}: {
+  title: string; message: string; confirmLabel?: string;
+  onConfirm: () => void; onClose: () => void;
+  /**
+   * Fourni (même à `false`), la modale passe en mode contrôlé : elle reste
+   * ouverte après le clic, affiche un indicateur tant que `busy` vaut `true`,
+   * et c'est le parent qui la ferme quand l'action a répondu. Absent :
+   * comportement historique, fermeture immédiate au clic.
+   */
+  busy?: boolean;
+}) {
+  const controlled = busy !== undefined;
   return (
-    <Modal title={title} onClose={onClose}>
+    <Modal title={title} onClose={busy ? () => undefined : onClose}>
       <p className="text-sm" style={{ color: "var(--adm-muted)" }}>{message}</p>
       <div className="mt-6 flex justify-end gap-3">
-        <Btn variant="ghost" onClick={onClose}>Annuler</Btn>
-        <Btn variant="danger" onClick={() => { onConfirm(); onClose(); }}>{confirmLabel}</Btn>
+        <Btn variant="ghost" onClick={onClose} disabled={busy}>Annuler</Btn>
+        <Btn
+          variant="danger"
+          disabled={busy}
+          onClick={() => {
+            onConfirm();
+            if (!controlled) onClose();
+          }}
+        >
+          {busy ? <><Spinner /> {confirmLabel}…</> : confirmLabel}
+        </Btn>
       </div>
     </Modal>
   );
