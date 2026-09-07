@@ -10,7 +10,6 @@ import type { Product, ProductVariant, Zone } from "../data";
  * lignes distinctes, comme dans n'importe quelle boutique.
  */
 export type CartLine = { product: Product; variant: ProductVariant; qty: number };
-export type DeliveryMethod = "home" | "relay";
 
 type CartState = {
   cart: CartLine[];
@@ -23,7 +22,6 @@ type CartState = {
    */
   pendingWishlist: string | null;
   zone: Zone | null;
-  delivery: DeliveryMethod;
   cartOpen: boolean;
   addToCart: (product: Product, variant: ProductVariant, qty?: number) => void;
   setQty: (variantId: string, qty: number) => void;
@@ -35,7 +33,6 @@ type CartState = {
   clearWishlist: () => void;
   setPendingWishlist: (productId: string | null) => void;
   setZone: (zone: Zone) => void;
-  setDelivery: (method: DeliveryMethod) => void;
 };
 
 export const useCartStore = create<CartState>()(
@@ -45,7 +42,6 @@ export const useCartStore = create<CartState>()(
       wishlist: [],
       pendingWishlist: null,
       zone: null,
-      delivery: "home",
       cartOpen: false,
 
       addToCart: (product, variant, qty = 1) =>
@@ -85,32 +81,32 @@ export const useCartStore = create<CartState>()(
       setPendingWishlist: (pendingWishlist) => set({ pendingWishlist }),
 
       setZone: (zone) => set({ zone }),
-      setDelivery: (delivery) => set({ delivery }),
     }),
     {
-      // Version incrémentée : l'ancien panier (sans déclinaison) n'est plus
-      // lisible, on le vide plutôt que de laisser planter l'affichage.
+      // v2 : l'ancien panier (sans déclinaison) n'est plus lisible, on le vide.
+      // v3 : le champ `delivery` (domicile / point relais) a disparu, le retrait
+      // en point relais n'est plus proposé.
       name: "mw-cart",
-      version: 2,
-      migrate: (persisted, version) =>
-        version < 2
-          ? { ...(persisted as object), cart: [] }
-          : (persisted as { cart: CartLine[]; wishlist: string[]; zone: Zone | null; delivery: DeliveryMethod }),
-      partialize: (state) => ({ cart: state.cart, wishlist: state.wishlist, zone: state.zone, delivery: state.delivery }),
+      version: 3,
+      migrate: (persisted, version) => {
+        if (version < 2) return { ...(persisted as object), cart: [] };
+        const { cart, wishlist, zone } = persisted as { cart: CartLine[]; wishlist: string[]; zone: Zone | null };
+        return { cart, wishlist, zone };
+      },
+      partialize: (state) => ({ cart: state.cart, wishlist: state.wishlist, zone: state.zone }),
     },
   ),
 );
 
-/** Retrait en point relais/boutique = gratuit ; livraison offerte au-delà du seuil de la zone. */
+/** Livraison offerte au-delà du seuil de la zone (ou panier vide). */
 export function useCartTotals() {
   const cart = useCartStore((s) => s.cart);
   const zone = useCartStore((s) => s.zone);
-  const delivery = useCartStore((s) => s.delivery);
 
   return useMemo(() => {
     const count = cart.reduce((n, line) => n + line.qty, 0);
     const subtotal = cart.reduce((n, line) => n + line.qty * line.product.price, 0);
-    const shipping = !zone || delivery === "relay" || subtotal >= zone.freeFrom || subtotal === 0 ? 0 : zone.fee;
+    const shipping = !zone || subtotal >= zone.freeFrom || subtotal === 0 ? 0 : zone.fee;
     return { count, subtotal, shipping };
-  }, [cart, zone, delivery]);
+  }, [cart, zone]);
 }

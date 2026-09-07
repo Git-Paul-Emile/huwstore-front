@@ -29,10 +29,14 @@ api.interceptors.request.use((config) => {
 /**
  * Renouvellement silencieux du jeton d'accès.
  *
- * Le jeton ne vit que 15 minutes. Plutôt que de déconnecter la cliente en
- * pleine commande, on rejoue une fois la requête après avoir demandé un
- * nouveau jeton. La promesse est mise en cache le temps de l'appel : dix
- * requêtes qui échouent en même temps ne déclenchent qu'un seul renouvellement.
+ * Le jeton ne vit que 15 minutes. Deux mécanismes le renouvellent :
+ *  - RÉACTIF : une requête qui prend un 401 déclenche un refresh puis rejoue.
+ *  - PROACTIF : `scheduleTokenRefresh` programme un refresh ~90 s avant
+ *    l'expiration, pour qu'une session active ne tombe JAMAIS en 401 en
+ *    pleine action. C'est ce qui évite la déconnexion « à tout bout de champ ».
+ *
+ * La promesse est mise en cache le temps de l'appel : dix requêtes qui
+ * échouent en même temps ne déclenchent qu'un seul renouvellement.
  */
 let refreshing: Promise<string | null> | null = null;
 
@@ -58,6 +62,43 @@ async function refreshSession(): Promise<string | null> {
 
   return refreshing;
 }
+
+/** Lit la date d'expiration (`exp`, en secondes) d'un JWT sans en vérifier la signature. */
+function readJwtExpiryMs(token: string): number | null {
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+    return typeof payload.exp === "number" ? payload.exp * 1000 : null;
+  } catch {
+    return null;
+  }
+}
+
+let proactiveTimer: ReturnType<typeof setTimeout> | null = null;
+
+/**
+ * Programme un renouvellement AVANT l'expiration du jeton d'accès. Appelée à
+ * chaque changement de jeton (connexion, refresh) via un abonnement au store.
+ */
+function scheduleTokenRefresh(token: string | null): void {
+  if (proactiveTimer) {
+    clearTimeout(proactiveTimer);
+    proactiveTimer = null;
+  }
+  if (!token) return;
+
+  const expiryMs = readJwtExpiryMs(token);
+  if (!expiryMs) return;
+
+  // 90 s de marge, plancher à 5 s pour ne pas boucler sur un jeton déjà presque mort.
+  const delay = Math.max(5_000, expiryMs - Date.now() - 90_000);
+  proactiveTimer = setTimeout(() => {
+    void refreshSession();
+  }, delay);
+}
+
+useAuthStore.subscribe((state, previous) => {
+  if (state.accessToken !== previous.accessToken) scheduleTokenRefresh(state.accessToken);
+});
 
 /**
  * Restaure la session au chargement de l'application.

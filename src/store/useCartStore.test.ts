@@ -4,7 +4,7 @@ import { useCartStore, useCartTotals } from "./useCartStore";
 import { makeProduct, makeVariant, makeZone } from "../test/fixtures";
 
 const reset = () =>
-  useCartStore.setState({ cart: [], wishlist: [], zone: null, delivery: "home", pendingWishlist: null });
+  useCartStore.setState({ cart: [], wishlist: [], zone: null, pendingWishlist: null });
 
 describe("useCartStore", () => {
   beforeEach(reset);
@@ -70,13 +70,10 @@ describe("useCartTotals", () => {
     expect(result.current.shipping).toBe(0);
   });
 
-  it("le retrait en point relais est toujours gratuit", () => {
-    const product = makeProduct({ price: 6000 });
-    useCartStore.getState().addToCart(product, product.variants[0]);
-    useCartStore.getState().setZone(makeZone());
-    useCartStore.getState().setDelivery("relay");
+  it("n'applique aucun frais de port sur un panier vide", () => {
+    useCartStore.getState().setZone(makeZone({ fee: 2000, freeFrom: 30000 }));
 
     const { result } = renderHook(() => useCartTotals());
-    expect(result.current.shipping).toBe(0);
+    expect(result.current).toMatchObject({ count: 0, subtotal: 0, shipping: 0 });
   });
 });

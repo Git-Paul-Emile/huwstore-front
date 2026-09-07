@@ -69,7 +69,7 @@ export default function Settings() {
         fee: Number(data.get("fee") ?? 0),
         freeFrom: Number(data.get("freeFrom") ?? 0),
         delay: String(data.get("delay") ?? ""),
-        relay: data.get("relay") === "on",
+        relay: false,
       },
       {
         onSuccess: () => {
@@ -176,9 +176,6 @@ export default function Settings() {
               <ZoneField label="Frais (FCFA)" name="fee" type="number" min={0} defaultValue={2000} required />
               <ZoneField label="Offerte dès (FCFA)" name="freeFrom" type="number" min={0} defaultValue={75000} required />
               <ZoneField label="Délai" name="delay" defaultValue="24 h" required />
-              <label className="flex items-end gap-2 text-sm" style={{ color: "var(--adm-text)" }}>
-                <input type="checkbox" name="relay" className="h-4 w-4" /> Point relais
-              </label>
               <div className="lg:col-span-6">
                 <Btn type="submit" disabled={createZone.isPending}>
                   {createZone.isPending ? "Enregistrement…" : "Enregistrer la zone"}
@@ -230,9 +227,8 @@ export default function Settings() {
                   />
                 </label>
 
-                <div className="mt-2 flex items-center justify-between">
+                <div className="mt-2">
                   <span className="text-sm" style={{ color: "var(--adm-text)" }}>{fcfa(zone.fee)}</span>
-                  {zone.relay && <Pill tone="blue">Relais dispo</Pill>}
                 </div>
                 <button
                   onClick={() =>

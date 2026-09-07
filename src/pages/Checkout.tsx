@@ -10,7 +10,7 @@ import { validatePromo, type PromoQuote } from "../api/promos";
 import { PAY_METHOD_COD, type DeliveryMode } from "../api/orders";
 import { fcfa } from "../data";
 import { readApiError } from "../api/axiosConfig";
-import { ArrowRight, Check, Truck, MapPin, Phone } from "../components/icons";
+import { ArrowRight, Check, Truck, Phone } from "../components/icons";
 import { useSeo } from "../hooks/useSeo";
 
 type Form = {
@@ -34,8 +34,6 @@ export default function Checkout() {
   const clear = useCartStore((s) => s.clear);
   const zone = useCartStore((s) => s.zone);
   const setZone = useCartStore((s) => s.setZone);
-  const delivery = useCartStore((s) => s.delivery);
-  const setDelivery = useCartStore((s) => s.setDelivery);
 
   const user = useAuthStore((s) => s.user);
 
@@ -51,11 +49,12 @@ export default function Checkout() {
   const [promoLoading, setPromoLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const deliveryMode: DeliveryMode = delivery === "relay" ? "Point relais" : "Domicile";
+  // La boutique ne propose que la livraison à domicile.
+  const deliveryMode: DeliveryMode = "Domicile";
   const items = useMemo(() => cart.map((line) => ({ variantId: line.variant.id, qty: line.qty })), [cart]);
 
   const subtotal = cart.reduce((sum, line) => sum + line.qty * line.product.price, 0);
-  const shipping = !zone || deliveryMode === "Point relais" || subtotal >= zone.freeFrom ? 0 : zone.fee;
+  const shipping = !zone || subtotal >= zone.freeFrom ? 0 : zone.fee;
   const discount = promo?.discount ?? 0;
   const total = subtotal + shipping - discount;
 
@@ -65,7 +64,7 @@ export default function Checkout() {
   useEffect(() => {
     setPromo(null);
     setPromoError(null);
-  }, [items, zone?.id, deliveryMode]);
+  }, [items, zone?.id]);
 
   // Pré-remplissage : le compte, puis l'adresse par défaut du carnet.
   useEffect(() => {
@@ -218,21 +217,16 @@ export default function Checkout() {
           <fieldset className="flex flex-col gap-4">
             <legend className="serif mb-2 text-lg">Livraison</legend>
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              <ModeCard
-                active={delivery === "home"}
-                onClick={() => setDelivery("home")}
-                icon={<Truck className="text-lg text-gold-deep" />}
-                title="Livraison à domicile"
-                text={zone ? `${zone.delay} - ${zone.fee === 0 ? "offerte" : fcfa(zone.fee)}` : "Choisissez une zone"}
-              />
-              <ModeCard
-                active={delivery === "relay"}
-                onClick={() => setDelivery("relay")}
-                icon={<MapPin className="text-lg text-gold-deep" />}
-                title="Retrait en point relais"
-                text="Sans frais"
-              />
+            <div className="flex items-start gap-3 border border-taupe/30 bg-cream-tint p-4">
+              <Truck className="mt-0.5 text-lg text-gold-deep" />
+              <div>
+                <p className="text-sm font-medium text-ink">Livraison à domicile</p>
+                <p className="mt-1 text-sm text-taupe">
+                  {zone
+                    ? `${zone.delay} - ${zone.fee === 0 ? "livraison offerte" : fcfa(zone.fee)}`
+                    : "Choisissez votre ville ci-dessous pour connaître le délai et les frais."}
+                </p>
+              </div>
             </div>
 
             <label className="flex flex-col gap-1.5">
@@ -430,33 +424,3 @@ function Field({
   );
 }
 
-function ModeCard({
-  active,
-  onClick,
-  icon,
-  title,
-  text,
-}: {
-  active: boolean;
-  onClick: () => void;
-  icon: React.ReactNode;
-  title: string;
-  text: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={`flex items-start gap-3 border p-4 text-left transition-colors ${
-        active ? "border-gold bg-cream-tint" : "border-taupe/30 hover:border-taupe"
-      }`}
-    >
-      {icon}
-      <span>
-        <span className="block text-sm font-medium text-ink">{title}</span>
-        <span className="mt-0.5 block text-xs text-taupe">{text}</span>
-      </span>
-    </button>
-  );
-}
