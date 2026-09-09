@@ -53,8 +53,13 @@ export default function Checkout() {
   const deliveryMode: DeliveryMode = "Domicile";
   const items = useMemo(() => cart.map((line) => ({ variantId: line.variant.id, qty: line.qty })), [cart]);
 
+  // On ne fait confiance qu'à une zone qui existe encore côté serveur : une zone
+  // supprimée restée en mémoire locale ne doit ni chiffrer les frais ni partir
+  // avec la commande.
+  const activeZone = zone && zones.some((z) => z.id === zone.id) ? zone : null;
+
   const subtotal = cart.reduce((sum, line) => sum + line.qty * line.product.price, 0);
-  const shipping = !zone || subtotal >= zone.freeFrom ? 0 : zone.fee;
+  const shipping = !activeZone || subtotal >= activeZone.freeFrom ? 0 : activeZone.fee;
   const discount = promo?.discount ?? 0;
   const total = subtotal + shipping - discount;
 
@@ -105,7 +110,7 @@ export default function Checkout() {
     setPromoLoading(true);
     setPromoError(null);
     try {
-      const quote = await validatePromo({ code, items, deliveryZoneId: zone?.id, deliveryMode });
+      const quote = await validatePromo({ code, items, deliveryZoneId: activeZone?.id, deliveryMode });
       setPromo(quote);
       toast(`Code ${quote.code} appliqué`);
     } catch (err) {
@@ -120,7 +125,7 @@ export default function Checkout() {
     event.preventDefault();
     setError(null);
 
-    if (!zone) return setError("Choisissez votre zone de livraison.");
+    if (!activeZone) return setError("Choisissez votre zone de livraison.");
     if (cart.length === 0) return setError("Votre panier est vide.");
 
     try {
@@ -130,10 +135,10 @@ export default function Checkout() {
         email: form.email.trim() || undefined,
         addressLine: form.addressLine.trim(),
         landmark: form.landmark.trim() || undefined,
-        city: zone.city,
-        country: zone.country,
+        city: activeZone.city,
+        country: activeZone.country,
         deliveryMode,
-        deliveryZoneId: zone.id,
+        deliveryZoneId: activeZone.id,
         method: PAY_METHOD_COD,
         promoCode: promo?.code ?? undefined,
         note: form.note.trim() || undefined,
@@ -222,8 +227,8 @@ export default function Checkout() {
               <div>
                 <p className="text-sm font-medium text-ink">Livraison à domicile</p>
                 <p className="mt-1 text-sm text-taupe">
-                  {zone
-                    ? `${zone.delay} - ${zone.fee === 0 ? "livraison offerte" : fcfa(zone.fee)}`
+                  {activeZone
+                    ? `${activeZone.delay} - ${activeZone.fee === 0 ? "livraison offerte" : fcfa(activeZone.fee)}`
                     : "Choisissez votre ville ci-dessous pour connaître le délai et les frais."}
                 </p>
               </div>
@@ -233,7 +238,7 @@ export default function Checkout() {
               <span className="label-lux text-taupe">Zone de livraison</span>
               <select
                 required
-                value={zone?.id ?? ""}
+                value={activeZone?.id ?? ""}
                 onChange={(e) => {
                   const selected = zones.find((z) => z.id === e.target.value);
                   if (selected) setZone(selected);
@@ -278,9 +283,11 @@ export default function Checkout() {
             <div className="flex items-start gap-3 border border-gold/60 bg-cream-tint p-4">
               <Phone className="mt-0.5 text-lg text-gold-deep" />
               <div>
-                <p className="text-sm font-medium text-ink">Paiement à la livraison</p>
+                <p className="text-sm font-medium text-ink">Paiement selon votre zone</p>
                 <p className="mt-1 text-sm text-taupe">
-                  Vous réglez en espèces au moment de la remise du colis. Aucun paiement en ligne ne vous sera demandé.
+                  Sur Dakar, vous réglez en espèces à la remise du colis. Dans les autres régions, la commande est
+                  confirmée par un paiement Wave ou Orange Money effectué hors du site : envoyez la preuve par
+                  WhatsApp, le colis part dès le paiement confirmé. Aucun paiement ne se fait sur ce site.
                 </p>
               </div>
             </div>

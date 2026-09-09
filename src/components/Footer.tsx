@@ -51,7 +51,7 @@ export default function Footer() {
           <div>
             <img src={logoLight} alt="HUWSTORE" className="h-20 w-auto md:h-24" />
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-cream/65">
-              Alliez style et praticité au quotidien. Livraison partout au Sénégal, paiement à la livraison.
+              Alliez style et praticité au quotidien. Livraison partout au Sénégal. Paiement à la livraison sur Dakar, par Wave ou Orange Money en région.
             </p>
           </div>
 

@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { useProduct, useProducts } from "../hooks/useProducts";
 import { useCartStore } from "../store/useCartStore";
 import { useWishlist } from "../hooks/useWishlist";
 import { useSeo } from "../hooks/useSeo";
 import { cm, dimensionLabels, fcfa, grams, type ProductVariant } from "../data";
 import { ProductCard } from "../components/Shared";
+import Breadcrumb from "../components/Breadcrumb";
 import { Heart, Bag, Truck, Shield, Plus, Minus, ChevronDown, Play } from "../components/icons";
 
 function Accordion({ title, children, open: initial = false }: { title: string; children: React.ReactNode; open?: boolean }) {
@@ -58,7 +59,6 @@ type GalleryItem = {
 };
 
 export default function Product() {
-  const navigate = useNavigate();
   const { id = "" } = useParams<{ id: string }>();
   const { data: product, isLoading } = useProduct(id);
   const addToCart = useCartStore((s) => s.addToCart);
@@ -171,21 +171,39 @@ export default function Product() {
   };
 
   return (
-    <div className="mx-auto max-w-[1400px] px-5 py-8 md:px-10">
-      <nav className="label-lux flex items-center gap-2 text-taupe">
-        <button onClick={() => navigate("/")} className="hover:text-gold-deep">Accueil</button>
-        <span>/</span>
-        <button onClick={() => navigate(`/boutique/${encodeURIComponent(product.category)}`)} className="hover:text-gold-deep">
-          {product.category}
-        </button>
-        <span>/</span>
-        <span className="text-anthracite">{product.name}</span>
-      </nav>
+    <div className="mx-auto max-w-[1400px] px-5 pb-8 pt-3 md:px-10 md:py-8">
+      {/* Fil d'Ariane masqué sur mobile : sur un téléphone il retombait sur
+          deux ou trois lignes juste au-dessus d'une photo déjà pleine largeur,
+          pour une information que le titre porte déjà. Il revient à partir de
+          `md`, où il tient sur une ligne. */}
+      <Breadcrumb
+        className="hidden md:flex"
+        items={[
+          { label: "Accueil", to: "/" },
+          { label: product.category, to: `/boutique/${encodeURIComponent(product.category)}` },
+          { label: product.name },
+        ]}
+      />
 
-      <div className="mt-6 grid gap-10 lg:grid-cols-2">
-        {/* Galerie */}
-        <div className="flex flex-col-reverse gap-4 md:flex-row">
-          <div className="flex gap-3 overflow-x-auto md:flex-col md:overflow-visible">
+      <div className="mt-0 grid gap-10 md:mt-6 lg:grid-cols-2">
+        {/* Galerie.
+
+            Deux mises en page distinctes selon l'écran :
+
+            - Mobile (< md) : la photo occupe toute la largeur de l'écran
+              (`-mx-5` annule le rembourrage de la page), sans coins arrondis,
+              avec le compteur « n/total » en incrustation. C'est la
+              présentation attendue d'une fiche produit sur téléphone.
+            - `md` et plus : la galerie se recentre dans une colonne, la bande
+              de vignettes passe à la verticale à gauche de la photo, et à
+              partir de `lg` la colonne de droite porte les informations.
+
+            `min-w-0` sur la colonne ET sur la bande de vignettes : sans lui, la
+            largeur minimale de la bande (la somme des vignettes qui ne se
+            compriment pas) forçait la colonne à déborder, et toute la page
+            défilait horizontalement sur les fiches à plus de trois photos. */}
+        <div className="-mx-5 flex min-w-0 flex-col-reverse gap-3 md:mx-auto md:w-full md:max-w-lg md:flex-row md:gap-4 lg:max-w-none">
+          <div className="flex min-w-0 gap-2.5 overflow-x-auto px-5 md:flex-col md:gap-3 md:overflow-x-visible md:px-0">
             {gallery.map((item, i) => (
               <button
                 key={item.url}
@@ -210,8 +228,8 @@ export default function Product() {
             ))}
           </div>
 
-          <div className="flex-1">
-            <div className="group relative overflow-hidden rounded-xl bg-cream-tint">
+          <div className="min-w-0 md:flex-1">
+            <div className="group relative overflow-hidden bg-cream-tint md:rounded-xl">
               {cover?.kind === "video" ? (
                 /*
                  * Lecture immédiate, son coupé.
@@ -241,13 +259,13 @@ export default function Product() {
                   controls
                   playsInline
                   preload="metadata"
-                  className="aspect-[4/5] w-full bg-ink object-contain"
+                  className="aspect-square w-full bg-ink object-contain md:aspect-[4/5]"
                 />
               ) : (
                 <img
                   src={cover?.url}
                   alt={cover?.alt ?? product.imageAlt}
-                  className="aspect-[4/5] w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                  className="aspect-square w-full object-cover transition-transform duration-500 group-hover:scale-110 md:aspect-[4/5]"
                 />
               )}
               {product.badge && (
@@ -259,6 +277,14 @@ export default function Product() {
                   {product.badge}
                 </span>
               )}
+
+              {/* Compteur « photo courante / total », comme sur une fiche
+                  produit d'application. Inutile s'il n'y a qu'un seul média. */}
+              {gallery.length > 1 && (
+                <span className="absolute bottom-2 right-2 rounded-full bg-ink/65 px-2.5 py-1 text-xs tabular-nums text-cream md:hidden">
+                  {activeImage + 1}/{gallery.length}
+                </span>
+              )}
             </div>
 
             {/* La photo affichée appartient à un autre coloris que celui
@@ -266,7 +292,7 @@ export default function Product() {
                 mention, la visiteuse croirait regarder la couleur qu'elle
                 s'apprête à commander. */}
             {cover?.colorSlug && cover.colorSlug !== variant?.colorSlug && (
-              <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-taupe">
+              <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 px-5 text-xs text-taupe md:px-0">
                 <span>Photo du coloris {cover.colorName}.</span>
                 <button
                   onClick={() => selectVariant(cover.colorSlug!)}
@@ -280,7 +306,7 @@ export default function Product() {
         </div>
 
         {/* Informations */}
-        <div className="lg:pl-6">
+        <div className="min-w-0 lg:pl-6">
           <p className="label-lux text-gold-deep">{product.collection}</p>
           <h1 className="serif mt-2 text-[1.75rem] leading-tight sm:text-3xl md:text-4xl">{product.name}</h1>
 
@@ -364,10 +390,10 @@ export default function Product() {
           {/* Réassurance */}
           <div className="mt-6 space-y-2.5 text-sm text-anthracite">
             <p className="flex items-center gap-2.5">
-              <Truck className="text-lg text-gold-deep" /> Livraison sous 24 h à 6 jours selon la zone - frais calculés au panier
+              <Truck className="text-lg text-gold-deep" /> Livraison 24 h sur Dakar, 72 h ouvrées en région - frais calculés au panier
             </p>
             <p className="flex items-center gap-2.5">
-              <Shield className="text-lg text-gold-deep" /> Paiement à la livraison, en espèces
+              <Shield className="text-lg text-gold-deep" /> Espèces à la livraison sur Dakar, Wave ou Orange Money en région
             </p>
           </div>
 
@@ -427,11 +453,13 @@ export default function Product() {
             <Accordion title="Conseils d'entretien">{product.care}</Accordion>
 
             <Accordion title="Livraison &amp; paiement">
-              Livraison à domicile ou retrait gratuit en point relais / boutique, partout au Sénégal : 24 h sur Dakar,
-              sauf le dimanche. Pour les autres zones, le délai annoncé est celui affiché au panier. Les frais
-              dépendent de la zone et sont offerts au-delà du seuil indiqué au panier. Le
-              règlement se fait en espèces à la remise du colis. Les retours et les échanges ne sont pas acceptés :
-              vérifiez l'article devant la personne qui vous le remet.
+              Livraison à domicile ou retrait gratuit en point relais / boutique, partout au Sénégal : moins de 24 h
+              sur Dakar sauf le dimanche, sous 72 h ouvrées pour les autres régions. Les frais dépendent de la zone
+              et sont offerts au-delà du seuil indiqué au panier. Sur Dakar, le règlement se fait en espèces à la
+              remise du colis. Pour les autres régions, la commande est confirmée par un paiement Wave ou Orange
+              Money effectué hors du site, preuve envoyée par WhatsApp, et le colis part une fois le paiement
+              confirmé. Les retours et les échanges ne sont pas acceptés : vérifiez l'article devant la personne qui
+              vous le remet.
             </Accordion>
           </div>
         </div>

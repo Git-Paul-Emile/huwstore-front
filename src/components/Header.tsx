@@ -11,6 +11,25 @@ import { Search, User, Heart, Bag, Menu, Close } from "./icons";
 import logoDark from "../assets/logo1.svg";
 
 /**
+ * Promesses de la boutique, affichées dans le ruban du haut SUR LA PAGE
+ * D'ACCUEIL seulement (demande du 09/09/2026 : elles ont quitté leur section
+ * sous le bandeau d'accueil pour venir au-dessus du menu).
+ *
+ * Chacune correspond à une règle réellement appliquée : une phrase affichée en
+ * vitrine engage la boutique aussi sûrement qu'un contrat, et une promesse non
+ * tenue se paie au moment de la livraison. N'en ajouter aucune qui ne le soit
+ * pas.
+ *
+ * Une seule ligne chacune, sans titre séparé : un ruban défile, il n'a pas de
+ * seconde ligne où poser un détail.
+ */
+const PROMESSES = [
+  "Livrée partout au Sénégal : Dakar, banlieue et régions",
+  "Livraison 24 h sur Dakar sauf le dimanche, 72 h en région",
+  "Paiement en espèces à la livraison sur Dakar, Wave ou Orange Money en région",
+];
+
+/**
  * Onglets de navigation. `to` mène vers une page ; `anchor` défile jusqu'à une
  * section de la page d'accueil (identifiée par son `id`), en y naviguant
  * d'abord si on se trouve ailleurs sur le site.
@@ -57,8 +76,31 @@ export default function Header() {
     return () => observer.disconnect();
   }, [setHeaderHeight]);
 
+  // Le panier garde la zone de livraison en mémoire locale. On la réaligne sur
+  // la liste réelle du serveur : une zone supprimée (ex. une ville de test)
+  // retombe sur la première zone valide, une zone renommée ou retarifée est
+  // resynchronisée. Sans ça, le panier peut afficher « Abidjan - 3 000 FCFA »
+  // alors que la boutique ne livre qu'au Sénégal.
   useEffect(() => {
-    if (!zone && zones.length > 0) setZone(zones[0]);
+    if (zones.length === 0) return;
+    if (!zone) {
+      setZone(zones[0]);
+      return;
+    }
+    const fresh = zones.find((z) => z.id === zone.id);
+    if (!fresh) {
+      setZone(zones[0]);
+      return;
+    }
+    if (
+      fresh.city !== zone.city ||
+      fresh.country !== zone.country ||
+      fresh.fee !== zone.fee ||
+      fresh.freeFrom !== zone.freeFrom ||
+      fresh.delay !== zone.delay
+    ) {
+      setZone(fresh);
+    }
   }, [zone, zones, setZone]);
 
   useEffect(() => {
@@ -85,18 +127,57 @@ export default function Header() {
     navigate(item.to);
   };
 
+  // Le ruban ne porte les promesses que sur l'accueil. `headerHeight` est
+  // mesuré par un ResizeObserver, la hauteur du haut de page suit donc toute
+  // seule d'une page à l'autre : rien à corriger côté bandeau d'accueil.
+  const ruban = [...(shop.announcement ? [shop.announcement] : []), ...(location.pathname === "/" ? PROMESSES : [])];
+
+  const serieRuban = ruban.map((message, i) => (
+    <span key={i} className="flex items-center">
+      <span aria-hidden className="mx-8 h-3 w-px shrink-0 bg-gold/45" />
+      <span className="label-lux text-[0.62rem] text-cream/80">{message}</span>
+    </span>
+  ));
+
   return (
     <>
       <div ref={navRef}>
-      {/* Bandeau d'annonce : texte saisi dans Paramètres, masqué s'il est vide. */}
-      {shop.announcement && (
-        <div className="bg-ink text-cream overflow-hidden">
-          <div className="flex w-max animate-marquee whitespace-nowrap py-2.5">
-            {[shop.announcement, shop.announcement].map((message, i) => (
-              <span key={i} className="label-lux mx-10 text-[0.62rem] text-cream/80">
-                {message}
-              </span>
-            ))}
+      {/* Ruban du haut, au-dessus du menu.
+ 
+          Il porte l'annonce saisie dans Paramètres, sur toutes les pages, et
+          les trois promesses de la boutique sur la seule page d'accueil. Un
+          SEUL ruban et non deux bandes superposées : deux bandes noires avant
+          le logo repoussent le contenu d'autant, et la visiteuse ne sait plus
+          laquelle lire.
+
+          L'annonce reste affichée partout : la boutique s'en sert pour une
+          promotion ou une fermeture, la restreindre à l'accueil lui retirerait
+          un moyen de prévenir.
+
+          Séparateur : un filet vertical doré, pas un point médian - celui-ci
+          est interdit par `rules/00-socle/conventions-redaction.md`, en noir
+          comme en couleur.
+
+          La seconde série est là pour que la boucle soit continue : au bout de
+          l'animation le ruban a défilé de la moitié de sa largeur, donc
+          exactement d'une série, et le raccord est invisible. Elle porte
+          `aria-hidden` et `inert`, sinon la visiteuse entend deux fois les
+          mêmes promesses au lecteur d'écran et les traverse deux fois au
+          clavier. */}
+      {ruban.length > 0 && (
+        <div className="overflow-hidden bg-ink text-cream">
+          {/* La durée suit le nombre de messages : à durée fixe, un ruban deux
+              fois plus long défilerait deux fois plus vite et deviendrait
+              illisible. Plancher à 28 s, la valeur d'origine quand il n'y a que
+              l'annonce. */}
+          <div
+            className="flex w-max animate-marquee items-center whitespace-nowrap py-2.5"
+            style={{ animationDuration: `${Math.max(28, ruban.length * 16)}s` }}
+          >
+            <div className="flex items-center">{serieRuban}</div>
+            <div className="flex items-center" aria-hidden inert>
+              {serieRuban}
+            </div>
           </div>
         </div>
       )}

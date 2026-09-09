@@ -96,11 +96,14 @@ export default function OrderConfirmation() {
         </InfoCard>
 
         <InfoCard icon={<Phone className="text-lg text-gold-deep" />} title="Paiement">
-          <p className="font-medium text-ink">{order.method}</p>
-          <p>
-            Vous réglerez <span className="text-anthracite">{fcfa(order.total)}</span> en espèces à la remise du colis.
+          <p className="font-medium text-ink">
+            Montant : <span className="text-anthracite">{fcfa(order.total)}</span>
           </p>
-          <p>Aucun paiement en ligne ne vous sera demandé.</p>
+          <p>
+            Sur Dakar, en espèces à la remise du colis. Dans les autres régions, par Wave ou Orange Money hors du
+            site, preuve par WhatsApp : le colis part une fois le paiement confirmé.
+          </p>
+          <p>Aucun paiement ne se fait sur ce site.</p>
         </InfoCard>
       </div>
 

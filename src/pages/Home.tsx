@@ -8,7 +8,7 @@ import Hero from "../components/Hero";
 import PromoBanner from "../components/PromoBanner";
 import UniverseSlider from "../components/UniverseSlider";
 import CardRail from "../components/CardRail";
-import { ArrowRight, Leaf, Truck, Shield, MapPin } from "../components/icons";
+import { ArrowRight } from "../components/icons";
 import { useSeo } from "../hooks/useSeo";
 
 /**
@@ -19,14 +19,6 @@ import { useSeo } from "../hooks/useSeo";
  * affichée en vitrine engage la boutique aussi sûrement qu'un contrat, et une
  * photo d'illustration qui ne montre pas un vrai sac déçoit à la livraison.
  */
-
-/** Réassurance. Chaque promesse correspond à une règle réellement appliquée. */
-const reassurance = [
-  { icon: Leaf, title: "Toile, coton et PU", text: "Des matières choisies pour l'usage quotidien" },
-  { icon: MapPin, title: "Partout au Sénégal", text: "Dakar, banlieue et régions" },
-  { icon: Truck, title: "Livraison rapide", text: "24 h sur Dakar, sauf le dimanche" },
-  { icon: Shield, title: "Paiement à la livraison", text: "Vous réglez en espèces à la remise du colis" },
-];
 
 /**
  * Vitesse du glissement CONTINU, en pixels par seconde. Le rail ne s'arrête
@@ -92,27 +84,16 @@ export default function Home() {
   useSeo({
     title: "HUWSTORE",
     description:
-      "Sacs et accessoires en toile, coton et cuir polyuréthane. Livraison 24 h sur Dakar sauf le dimanche, paiement à la livraison.",
+      "Sacs et accessoires en toile, coton et cuir polyuréthane. Livraison 24 h sur Dakar sauf le dimanche, 72 h en région. Paiement à la livraison sur Dakar, par Wave ou Orange Money ailleurs.",
   });
 
   return (
     <div>
       <Hero />
 
-      {/* Réassurance */}
-      <section className="border-b border-taupe/25">
-        <div className="mx-auto grid max-w-[1400px] grid-cols-2 gap-x-6 gap-y-8 px-5 md:px-10 py-10 lg:grid-cols-4">
-          {reassurance.map((r) => (
-            <div key={r.title} className="flex items-start gap-3.5">
-              <r.icon className="mt-0.5 shrink-0 text-2xl text-gold-deep" />
-              <div>
-                <p className="text-sm font-medium text-ink">{r.title}</p>
-                <p className="mt-1 text-xs leading-relaxed text-taupe">{r.text}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
+      {/* Les promesses de la boutique ne sont plus ici : depuis le 09/09/2026
+          elles défilent dans le ruban du haut, au-dessus du menu, et sur la
+          seule page d'accueil. Voir `components/Header.tsx`. */}
 
       {/* Univers : le classement par matière précède le classement par ventes,
           pour que la visiteuse choisisse d'abord une famille de sacs. */}

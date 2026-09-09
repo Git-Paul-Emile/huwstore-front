@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { useCategories } from "../hooks/useCategories";
 import { useProductFacets, useProductPage } from "../hooks/useProducts";
 import { fcfa } from "../data";
 import { ProductCard } from "../components/Shared";
 import { ChevronDown, Close, Plus, Minus, Menu, Search as SearchIcon } from "../components/icons";
+import ListingBanner from "../components/ListingBanner";
+import Breadcrumb from "../components/Breadcrumb";
 import { useSeo } from "../hooks/useSeo";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
 
@@ -27,7 +29,6 @@ function FilterGroup({ title, children, open: init = true }: { title: string; ch
 }
 
 export default function Listing() {
-  const navigate = useNavigate();
   const { category } = useParams<{ category?: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const { data: categories = [] } = useCategories();
@@ -138,7 +139,7 @@ export default function Listing() {
     // elle produirait autant d'URL que de requetes possibles (rules/SEO.md).
     noindex: Boolean(debouncedSearch),
     description:
-      "Toutes nos pièces : sacs, tote bags et accessoires. Livraison partout au Sénégal, paiement à la livraison.",
+      "Toutes nos pièces : sacs, tote bags et accessoires. Livraison partout au Sénégal. Paiement à la livraison sur Dakar, par Wave ou Orange Money en région.",
   });
 
   const toggle = (arr: string[], set: (v: string[]) => void, v: string) =>
@@ -211,20 +212,12 @@ export default function Listing() {
   return (
     <div className="mx-auto max-w-[1400px] px-5 md:px-10 py-8">
       {/* Fil d'Ariane + titre */}
-      <nav className="label-lux flex items-center gap-2 text-taupe">
-        <button onClick={() => navigate("/")} className="hover:text-gold-deep">Accueil</button>
-        <span>/</span>
-        <span className="text-anthracite">{category ?? "Boutique"}</span>
-      </nav>
+      <Breadcrumb items={[{ label: "Accueil", to: "/" }, { label: category ?? "Boutique" }]} />
 
-      {/* Bandeau catégorie */}
-      <div className="mt-6 flex flex-col items-center justify-center bg-cream-tint px-6 py-10 text-center md:py-14">
-        <p className="label-lux text-gold-deep">Maroquinerie</p>
-        <h1 className="serif mt-3 text-[1.6rem] leading-tight sm:text-3xl md:text-4xl">{category ?? "Toute la collection"}</h1>
-        <p className="mt-3 max-w-lg text-sm text-taupe">
-          Des pièces façonnées à la main, sélectionnées pour leur matière et leur ligne.
-        </p>
-      </div>
+      {/* Bandeau de la boutique : trois volets qui défilent. Le `<h1>` de la
+          page vit dans le premier d'entre eux, avec le nom de la catégorie
+          courante. Voir `components/ListingBanner.tsx`. */}
+      <ListingBanner category={category} />
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[260px_1fr] lg:gap-10">
         <aside className="hidden lg:block">{sidebar}</aside>

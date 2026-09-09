@@ -9,8 +9,8 @@ import type { Category } from "../data";
  *
  * Chaque tuile montre une COUVERTURE (`category.preview`, calculé par l'API) :
  * l'image choisie pour l'univers au back-office si la boutique en a posé une,
- * sinon une sélection de photos de produits réellement rattachés à l'univers.
- * Le visuel de repli `category.image` ne sert que pour un univers encore vide.
+ * sinon la photo d'un produit réellement rattaché à l'univers. Le visuel de
+ * repli `category.image` ne sert que pour un univers encore vide.
  *
  * Toute la mécanique de défilement vit dans `CardRail` : ce composant ne
  * décrit qu'une tuile et laisse le rail s'occuper du reste.
@@ -93,11 +93,11 @@ function UniverseSkeleton() {
  * du milieu et se copie par le menu contextuel.
  */
 function UniverseCard({ category }: { category: Category }) {
-  const covers = (category.preview ?? []).slice(0, 4);
+  const cover = category.preview?.[0]?.url;
 
   return (
     <article className={`${CARD_SHELL} group`}>
-      <UniverseCover covers={covers} fallback={category.image} name={category.name} />
+      <UniverseCover cover={cover} fallback={category.image} name={category.name} />
 
       {/* Voile sombre : il n'apparaît qu'en bas, là où se pose le nom, pour
           garder la couverture lisible sans assombrir toute la photo. */}
@@ -116,25 +116,23 @@ function UniverseCard({ category }: { category: Category }) {
 }
 
 /**
- * La couverture : une mosaïque 2x2 quand l'univers a au moins quatre produits,
- * une seule photo entre un et trois, et le visuel de repli quand il est encore
- * vide. Les images sont décoratives (le nom porte déjà le lien) donc `alt=""`.
+ * La couverture : une seule photo. Celle choisie au back-office si la boutique
+ * en a posé une, sinon la photo d'un produit rattaché à l'univers, calculée par
+ * l'API. Le visuel de repli ne sert que pour un univers encore sans produit.
+ *
+ * L'image de couverture est décorative (le nom porte déjà le lien) donc
+ * `alt=""` ; le repli garde un `alt` car il n'a aucun autre texte.
  */
-function UniverseCover({ covers, fallback, name }: { covers: { url: string }[]; fallback: string; name: string }) {
-  const base = "h-full w-full min-h-0 min-w-0 object-cover transition-transform duration-500 group-hover:scale-[1.05]";
-
-  if (covers.length >= 4) {
+function UniverseCover({ cover, fallback, name }: { cover?: string; fallback: string; name: string }) {
+  if (cover) {
     return (
-      <div className="grid h-full w-full grid-cols-2 grid-rows-2 gap-px bg-cream-tint">
-        {covers.map((cover) => (
-          <img key={cover.url} src={cover.url} alt="" loading="lazy" className={base} />
-        ))}
-      </div>
+      <img
+        src={cover}
+        alt=""
+        loading="lazy"
+        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.05]"
+      />
     );
-  }
-
-  if (covers.length >= 1) {
-    return <img src={covers[0].url} alt="" loading="lazy" className={base} />;
   }
 
   // Univers sans produit : le visuel de repli est un sac détouré, on le pose

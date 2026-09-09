@@ -9,8 +9,10 @@ import { useSeo } from "../../hooks/useSeo";
  * Elle décrit ce que le site collecte RÉELLEMENT, et par où ces données
  * passent. Trois affirmations d'ici tiennent à du code précis : les cookies
  * déposés (jeton de session et jeton anti-CSRF, voir `auth.controller.ts`),
- * l'absence de coordonnées bancaires (le paiement se fait à la livraison), et
- * l'envoi des e-mails de confirmation par un prestataire (`mail.service.ts`).
+ * l'absence de coordonnées bancaires (le paiement se fait en espèces à la
+ * livraison sur Dakar, par Wave ou Orange Money hors du site en région, jamais
+ * sur ce site), et l'envoi des e-mails de confirmation par un prestataire
+ * (`mail.service.ts`).
  * Si l'un de ces trois points change dans le code, cette page se corrige dans
  * le même mouvement - une politique de confidentialité fausse est pire que
  * pas de politique du tout.
@@ -40,8 +42,10 @@ export default function Confidentialite() {
           vos favoris et l'historique de vos commandes.
         </p>
         <p>
-          Aucune coordonnée bancaire n'est collectée : le règlement se fait à la livraison, en espèces. Ni ce site ni
-          nous ne vous demanderons jamais un numéro de carte ou un code de portefeuille électronique.
+          Aucune coordonnée bancaire n'est collectée. Sur Dakar, le règlement se fait en espèces à la livraison ;
+          dans les autres régions, par Wave ou Orange Money sur un numéro que nous vous communiquons, hors de ce
+          site, et aucune donnée de ce paiement n'y transite. Ni ce site ni nous ne vous demanderons jamais un
+          numéro de carte ou un code secret de portefeuille électronique.
         </p>
       </Section>
 

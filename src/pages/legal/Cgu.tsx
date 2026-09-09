@@ -7,11 +7,12 @@ import { useSeo } from "../../hooks/useSeo";
  * Conditions générales de vente et d'utilisation.
  *
  * Cette page ne décrit QUE la façon dont la boutique fonctionne réellement :
- * paiement à la livraison en espèces, livraison par zones, vérification du
- * colis à la remise. Une condition écrite ici engage la boutique aussi
- * sûrement qu'une promesse faite au téléphone - si une règle change dans le
- * code (un moyen de paiement s'ouvre, une zone de livraison disparaît), ce
- * texte se corrige dans le même mouvement.
+ * sur Dakar paiement à la livraison en espèces, dans les autres régions
+ * paiement Wave ou Orange Money hors du site qui confirme la commande,
+ * livraison par zones, vérification du colis à la remise. Une condition écrite
+ * ici engage la boutique aussi sûrement qu'une promesse faite au téléphone - si
+ * une règle change dans le code (un moyen de paiement s'ouvre, une zone de
+ * livraison disparaît), ce texte se corrige dans le même mouvement.
  *
  * Les coordonnées viennent des paramètres du back-office et non du code : la
  * boutique change de numéro sans qu'on ait à toucher à cette page.
@@ -21,7 +22,7 @@ export default function Cgu() {
   useSeo({
     title: "Conditions générales de vente et d'utilisation",
     description:
-      "Commande, paiement à la livraison, délais, vérification du colis et utilisation du site.",
+      "Commande, paiement à la livraison sur Dakar ou par Wave et Orange Money en région, délais, vérification du colis et utilisation du site.",
   });
 
   return (
@@ -76,27 +77,35 @@ export default function Cgu() {
         </p>
         <p>
           Un article peut se trouver épuisé entre l'ajout au panier et la préparation. Dans ce cas nous vous
-          appelons pour vous proposer un autre coloris, un autre article ou l'annulation de la commande. Aucune
-          somme n'étant versée à l'avance, une annulation ne vous coûte rien.
+          appelons pour vous proposer un autre coloris, un autre article ou l'annulation de la commande. Sur Dakar,
+          aucune somme n'étant versée à l'avance, une annulation ne vous coûte rien. Dans les autres régions, si
+          vous avez déjà payé par Wave ou Orange Money, la somme vous est reversée par le même canal.
         </p>
       </Section>
 
       <Section title="Paiement">
         <p>
-          Le règlement se fait <strong>en espèces, à la livraison</strong>, entre vos mains et celles de la personne
-          qui vous remet le colis. Il n'y a pas de paiement en ligne : aucune carte, aucun compte bancaire, aucun
-          portefeuille électronique ne vous est demandé, ni sur ce site ni par téléphone.
+          <strong>Sur Dakar</strong>, le règlement se fait <strong>en espèces, à la livraison</strong>, entre vos
+          mains et celles de la personne qui vous remet le colis.
         </p>
         <p>
-          Prévoyez le montant exact indiqué au récapitulatif de commande, frais de livraison compris.
+          <strong>Dans les autres régions</strong>, la commande est confirmée par un paiement <strong>Wave ou
+          Orange Money</strong> du montant total, effectué hors de ce site sur le numéro que nous vous communiquons.
+          Vous nous envoyez la preuve par WhatsApp ; le colis est expédié une fois le paiement confirmé.
+        </p>
+        <p>
+          Aucun paiement ne se fait sur ce site : aucune carte ni aucun compte bancaire ne vous est demandé, et
+          aucune donnée de paiement n'y transite. Prévoyez le montant exact indiqué au récapitulatif de commande,
+          frais de livraison compris.
         </p>
       </Section>
 
       <Section title="Livraison">
         <p>
-          Nous livrons partout au Sénégal, à domicile ou en point relais. Sur Dakar, la livraison intervient sous
-          24 heures, sauf le dimanche. Pour les autres zones, le délai est celui affiché au panier au moment de
-          votre commande, car il dépend de la zone choisie.
+          Nous livrons partout au Sénégal, à domicile ou en point relais. Sur Dakar, la livraison intervient en
+          moins de 24 heures, sauf le dimanche. Pour les autres régions, elle intervient sous 72 heures ouvrées à
+          partir de la confirmation du paiement ; le délai précis de votre zone est affiché au panier au moment de
+          votre commande.
         </p>
         <p>
           Les frais de livraison dépendent eux aussi de la zone ; ils sont affichés avant la validation et offerts

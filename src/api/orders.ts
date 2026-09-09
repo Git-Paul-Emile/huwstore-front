@@ -4,8 +4,11 @@ export type OrderStatus = "En préparation" | "Expédiée" | "En cours de livrai
 export type PayStatus = "Payé" | "En attente" | "Échoué";
 
 /**
- * La boutique encaisse à la livraison, en espèces, et rien d'autre : aucun
- * paiement en ligne n'est proposé et aucune coordonnée bancaire n'est collectée.
+ * Seul mode enregistré côté serveur. Sur Dakar il correspond au paiement en
+ * espèces à la livraison. Pour les autres régions, la cliente paie d'avance par
+ * Wave ou Orange Money hors du site (preuve WhatsApp) : ce paiement n'est pas
+ * suivi ici, la commande reste marquée « Paiement à la livraison » et la
+ * boutique vérifie l'encaissement à la main avant d'expédier.
  */
 export const PAY_METHOD_COD = "Paiement à la livraison" as const;
 export type PayMethod = typeof PAY_METHOD_COD;

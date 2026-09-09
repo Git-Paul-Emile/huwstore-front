@@ -65,7 +65,7 @@ export default function Settings() {
     createZone.mutate(
       {
         city: String(data.get("city") ?? ""),
-        country: String(data.get("country") ?? ""),
+        country: "Sénégal",
         fee: Number(data.get("fee") ?? 0),
         freeFrom: Number(data.get("freeFrom") ?? 0),
         delay: String(data.get("delay") ?? ""),
@@ -146,13 +146,21 @@ export default function Settings() {
         <Card className="p-5 lg:col-span-2">
           <h3 className="serif text-lg" style={{ color: "var(--adm-text)" }}>Encaissement</h3>
           <p className="mt-3 text-sm" style={{ color: "var(--adm-muted)" }}>
-            La boutique encaisse uniquement <strong style={{ color: "var(--adm-text)" }}>à la livraison</strong>, en
-            espèces. Aucun paiement en ligne n'est proposé et aucune coordonnée bancaire n'est collectée - ni sur le
-            site, ni en base.
+            Sur Dakar, la boutique encaisse <strong style={{ color: "var(--adm-text)" }}>à la livraison</strong>, en
+            espèces. Pour les autres régions, la commande est confirmée par un paiement <strong style={{ color: "var(--adm-text)" }}>Wave
+            ou Orange Money</strong> reçu hors du site, dont la preuve arrive par WhatsApp ; l'expédition suit cette
+            confirmation. Aucun paiement ne passe par le site et aucune coordonnée bancaire n'est collectée - ni sur
+            le site, ni en base.
           </p>
-          <div className="mt-4 flex items-center justify-between rounded-lg border px-4 py-3" style={{ borderColor: "var(--adm-border)" }}>
-            <span className="font-medium" style={{ color: "var(--adm-text)" }}>Paiement à la livraison</span>
-            <Pill tone="green">Actif</Pill>
+          <div className="mt-4 flex flex-col gap-2">
+            <div className="flex items-center justify-between rounded-lg border px-4 py-3" style={{ borderColor: "var(--adm-border)" }}>
+              <span className="font-medium" style={{ color: "var(--adm-text)" }}>Espèces à la livraison - Dakar</span>
+              <Pill tone="green">Actif</Pill>
+            </div>
+            <div className="flex items-center justify-between rounded-lg border px-4 py-3" style={{ borderColor: "var(--adm-border)" }}>
+              <span className="font-medium" style={{ color: "var(--adm-text)" }}>Wave ou Orange Money hors site - autres régions</span>
+              <Pill tone="green">Actif</Pill>
+            </div>
           </div>
         </Card>
 
@@ -172,7 +180,12 @@ export default function Settings() {
           {zoneFormOpen && (
             <form onSubmit={submitZone} className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
               <ZoneField label="Ville" name="city" required />
-              <ZoneField label="Pays" name="country" defaultValue="Sénégal" required />
+              {/* La boutique ne livre qu'au Sénégal : le pays est fixé, pour ne
+                  pas créer de zone étrangère qui rendrait le panier incohérent. */}
+              <label className="block text-xs" style={{ color: "var(--adm-muted)" }}>
+                Pays
+                <Input value="Sénégal" readOnly className="mt-1 opacity-70" />
+              </label>
               <ZoneField label="Frais (FCFA)" name="fee" type="number" min={0} defaultValue={2000} required />
               <ZoneField label="Offerte dès (FCFA)" name="freeFrom" type="number" min={0} defaultValue={75000} required />
               <ZoneField label="Délai" name="delay" defaultValue="24 h" required />

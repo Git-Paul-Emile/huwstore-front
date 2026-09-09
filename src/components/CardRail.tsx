@@ -43,6 +43,39 @@ type CardRailProps = {
   /** Libellés des flèches, adaptés au contenu ("Univers précédents"...). */
   previousLabel: string;
   nextLabel: string;
+  /**
+   * Prévenu à chaque changement de case. Sert au bandeau de la boutique, dont
+   * le texte vit HORS du rail et suit le volet affiché.
+   *
+   * Passer une fonction stable (un `setState`, ou une fonction mémorisée) :
+   * elle est appelée depuis un effet qui en dépend.
+   */
+  onIndexChange?: (index: number) => void;
+  /**
+   * Apparence complète des deux flèches, en classes utilitaires : taille,
+   * position, visibilité, couleurs, fond, ombre. `TrackButton` ne garde que la
+   * structure : une zone de clic ronde et son contenu centré. La taille de
+   * texte du bouton commande celle du chevron (1,5 em).
+   *
+   * Les couleurs sont ici et non dans le composant parce qu'elles dépendent de
+   * ce qu'il y a DERRIÈRE la flèche. Par défaut le rail défile sur le fond
+   * blanc cassé de la page : un rond crème cerné de taupe s'y détache. Le
+   * bandeau de la boutique pose ses flèches sur une photo à fond clair, où ce
+   * même rond crème devient invisible ; il en donne donc un sombre.
+   *
+   * Par défaut les flèches se posent aussi HORS du rail et disparaissent sur
+   * mobile, où l'on fait défiler au doigt. Ce composant ne code aucune mesure
+   * ni aucune couleur propres à un appelant.
+   */
+  arrowClassName?: { previous: string; next: string };
+};
+
+const ARROWS_OUTSIDE_BASE =
+  "hidden h-10 w-10 bg-cream text-xs text-ink shadow-[0_10px_25px_-12px_rgba(15,15,15,0.6)] ring-1 ring-taupe-soft/70 hover:bg-gold md:flex";
+
+const ARROWS_OUTSIDE = {
+  previous: `${ARROWS_OUTSIDE_BASE} -left-5 lg:-left-8`,
+  next: `${ARROWS_OUTSIDE_BASE} -right-5 lg:-right-8`,
 };
 
 /**
@@ -66,6 +99,8 @@ export default function CardRail({
   continuousPxPerSecond,
   previousLabel,
   nextLabel,
+  onIndexChange,
+  arrowClassName = ARROWS_OUTSIDE,
 }: CardRailProps) {
   const isContinuous = continuousPxPerSecond !== undefined && slides.length > 0;
   const prefersReducedMotion = usePrefersReducedMotion();
@@ -112,6 +147,13 @@ export default function CardRail({
       cancelAnimationFrame(frame);
     };
   }, [slides.length]);
+
+  // La position lue sur le rail est remontée telle quelle : l'appelant reçoit
+  // le même index que celui qui allume la puce, quelle que soit la manière
+  // dont on est arrivé là (doigt, flèches, puces, défilement automatique).
+  useEffect(() => {
+    onIndexChange?.(index);
+  }, [index, onIndexChange]);
 
   const goTo = useCallback(
     (position: number) => {
@@ -217,8 +259,14 @@ export default function CardRail({
               side="left"
               onClick={isContinuous ? () => nudge(-1) : goToPrevious}
               label={previousLabel}
+              className={arrowClassName.previous}
             />
-            <TrackButton side="right" onClick={isContinuous ? () => nudge(1) : goToNext} label={nextLabel} />
+            <TrackButton
+              side="right"
+              onClick={isContinuous ? () => nudge(1) : goToNext}
+              label={nextLabel}
+              className={arrowClassName.next}
+            />
           </>
         )}
       </div>
@@ -245,19 +293,38 @@ export default function CardRail({
   );
 }
 
-/** Flèche de commande, posée sur le bord du rail et masquée sur mobile. */
-function TrackButton({ side, onClick, label }: { side: "left" | "right"; onClick: () => void; label: string }) {
+/**
+ * Flèche de commande. Le composant ne fixe que sa STRUCTURE : une zone de clic
+ * ronde et son contenu centré. Tout le reste - taille, position, visibilité,
+ * couleurs, fond, ombre - vient de `arrowClassName`, donc de l'appelant, parce
+ * que tout cela dépend de ce sur quoi la flèche est posée. Ne rien remettre
+ * ici : une ombre portée écrite dans la base dessinerait un rectangle flou
+ * derrière une flèche sans fond.
+ */
+function TrackButton({
+  side,
+  onClick,
+  label,
+  className,
+}: {
+  side: "left" | "right";
+  onClick: () => void;
+  label: string;
+  className: string;
+}) {
   const Icon = side === "left" ? ChevronLeft : ChevronRight;
-  const placement = side === "left" ? "-left-5 lg:-left-8" : "-right-5 lg:-right-8";
 
   return (
     <button
       type="button"
       onClick={onClick}
       aria-label={label}
-      className={`absolute top-1/2 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-cream text-ink shadow-[0_10px_25px_-12px_rgba(15,15,15,0.6)] ring-1 ring-taupe-soft/70 transition-colors hover:bg-gold md:flex ${placement}`}
+      className={`absolute top-1/2 -translate-y-1/2 items-center justify-center rounded-full transition-colors ${className}`}
     >
-      <Icon className="text-lg" />
+      {/* Le chevron suit la taille de texte du bouton, donnée par l'appelant :
+          une flèche sans fond doit être plus grande qu'une flèche posée dans
+          un rond, qui la cadre déjà. */}
+      <Icon className="text-[1.5em]" />
     </button>
   );
 }
