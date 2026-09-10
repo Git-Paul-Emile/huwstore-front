@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useCartStore } from "../store/useCartStore";
 import { useAuthStore } from "../store/useAuthStore";
@@ -10,7 +10,7 @@ import { validatePromo, type PromoQuote } from "../api/promos";
 import { PAY_METHOD_COD, type DeliveryMode } from "../api/orders";
 import { fcfa } from "../data";
 import { readApiError } from "../api/axiosConfig";
-import { ArrowRight, Check, Truck, Phone } from "../components/icons";
+import { ArrowRight, Check, Truck, Phone, Alert } from "../components/icons";
 import { useSeo } from "../hooks/useSeo";
 
 type Form = {
@@ -22,7 +22,26 @@ type Form = {
   note: string;
 };
 
+type FieldErrors = Partial<Record<"client" | "phone" | "email" | "addressLine", string>>;
+
 const EMPTY_FORM: Form = { client: "", phone: "", email: "", addressLine: "", landmark: "", note: "" };
+
+// La validation navigateur est coupée (noValidate). Ces règles reprennent celles
+// du schéma serveur (back/src/validators/order.validator.ts et common.ts) pour
+// afficher un message avant l'appel réseau. Le serveur reste la source de vérité
+// et revalide chaque commande.
+const SENEGAL_PHONE = /^(?:\+221|00221)?7[05678]\d{7}$/;
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function validateForm(form: Form): FieldErrors {
+  const errors: FieldErrors = {};
+  if (form.client.trim().length < 2) errors.client = "Indiquez votre nom complet.";
+  if (!SENEGAL_PHONE.test(form.phone.replace(/[\s.-]/g, "")))
+    errors.phone = "Numéro de téléphone sénégalais attendu, ex. 77 123 45 67.";
+  if (form.email.trim() && !EMAIL.test(form.email.trim())) errors.email = "Adresse e-mail invalide.";
+  if (form.addressLine.trim().length < 5) errors.addressLine = "Indiquez votre adresse (quartier, rue, numéro).";
+  return errors;
+}
 
 export default function Checkout() {
   const navigate = useNavigate();
@@ -48,6 +67,8 @@ export default function Checkout() {
   const [promoError, setPromoError] = useState<string | null>(null);
   const [promoLoading, setPromoLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const formRef = useRef<HTMLFormElement>(null);
 
   // La boutique ne propose que la livraison à domicile.
   const deliveryMode: DeliveryMode = "Domicile";
@@ -121,12 +142,35 @@ export default function Checkout() {
     }
   }
 
+  function update(key: keyof Form, value: string) {
+    setForm((current) => ({ ...current, [key]: value }));
+    setFieldErrors((current) => {
+      if (!(key in current)) return current;
+      const next = { ...current };
+      delete next[key as keyof FieldErrors];
+      return next;
+    });
+  }
+
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
 
     if (!activeZone) return setError("Choisissez votre zone de livraison.");
     if (cart.length === 0) return setError("Votre panier est vide.");
+
+    const found = validateForm(form);
+    setFieldErrors(found);
+    if (Object.keys(found).length > 0) {
+      // Sans validation navigateur, plus rien n'amène l'utilisateur au champ
+      // fautif : on l'y conduit et on lui donne le focus une fois le message rendu.
+      requestAnimationFrame(() => {
+        const firstInvalid = formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]');
+        firstInvalid?.scrollIntoView({ behavior: "smooth", block: "center" });
+        firstInvalid?.focus({ preventScroll: true });
+      });
+      return;
+    }
 
     try {
       const order = await createOrder.mutateAsync({
@@ -170,7 +214,9 @@ export default function Checkout() {
         <h1 className="serif mt-2 text-2xl md:text-4xl">Finaliser ma commande</h1>
       </header>
 
-      <form onSubmit={submit} className="grid gap-10 lg:grid-cols-[1fr_380px] lg:gap-14">
+      {/* noValidate : la validation navigateur est coupée. Le contrôle se fait en
+          JS dans submit() via validateForm(), puis côté serveur qui tranche. */}
+      <form ref={formRef} onSubmit={submit} noValidate className="grid gap-10 lg:grid-cols-[1fr_380px] lg:gap-14">
         <div className="flex flex-col gap-10">
           {addresses.length > 0 && (
             <fieldset className="flex flex-col gap-3">
@@ -200,14 +246,21 @@ export default function Checkout() {
           <fieldset className="flex flex-col gap-4">
             <legend className="serif mb-2 text-lg">Vos coordonnées</legend>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Nom complet" required value={form.client} onChange={(v) => setForm({ ...form, client: v })} />
+              <Field
+                label="Nom complet"
+                required
+                value={form.client}
+                onChange={(v) => update("client", v)}
+                error={fieldErrors.client}
+              />
               <Field
                 label="Téléphone"
                 required
                 type="tel"
                 hint="C'est par ce numéro que la livreuse vous joindra."
                 value={form.phone}
-                onChange={(v) => setForm({ ...form, phone: v })}
+                onChange={(v) => update("phone", v)}
+                error={fieldErrors.phone}
               />
             </div>
             <Field
@@ -215,7 +268,8 @@ export default function Checkout() {
               type="email"
               hint="Pour recevoir la confirmation et la facture."
               value={form.email}
-              onChange={(v) => setForm({ ...form, email: v })}
+              onChange={(v) => update("email", v)}
+              error={fieldErrors.email}
             />
           </fieldset>
 
@@ -237,7 +291,6 @@ export default function Checkout() {
             <label className="flex flex-col gap-1.5">
               <span className="label-lux text-taupe">Zone de livraison</span>
               <select
-                required
                 value={activeZone?.id ?? ""}
                 onChange={(e) => {
                   const selected = zones.find((z) => z.id === e.target.value);
@@ -261,20 +314,21 @@ export default function Checkout() {
               required
               placeholder="Quartier, rue, numéro de villa"
               value={form.addressLine}
-              onChange={(v) => setForm({ ...form, addressLine: v })}
+              onChange={(v) => update("addressLine", v)}
+              error={fieldErrors.addressLine}
             />
             <Field
               label="Repère (facultatif)"
               placeholder="En face de la pharmacie, portail bleu…"
               hint="Un repère fait gagner un appel téléphonique à la livraison."
               value={form.landmark}
-              onChange={(v) => setForm({ ...form, landmark: v })}
+              onChange={(v) => update("landmark", v)}
             />
             <Field
               label="Note pour la boutique (facultatif)"
               placeholder="Emballage cadeau, créneau souhaité…"
               value={form.note}
-              onChange={(v) => setForm({ ...form, note: v })}
+              onChange={(v) => update("note", v)}
             />
           </fieldset>
 
@@ -285,9 +339,9 @@ export default function Checkout() {
               <div>
                 <p className="text-sm font-medium text-ink">Paiement selon votre zone</p>
                 <p className="mt-1 text-sm text-taupe">
-                  Sur Dakar, vous réglez en espèces à la remise du colis. Dans les autres régions, la commande est
-                  confirmée par un paiement Wave ou Orange Money effectué hors du site : envoyez la preuve par
-                  WhatsApp, le colis part dès le paiement confirmé. Aucun paiement ne se fait sur ce site.
+                  Sur Dakar, vous réglez en espèces ou mobile money à la remise du colis. Dans les autres régions, la
+                  commande est confirmée par un paiement Wave ou Orange Money effectué : envoyez la preuve par WhatsApp,
+                  le colis part dès le paiement confirmé. Aucun paiement ne se fait sur ce site.
                 </p>
               </div>
             </div>
@@ -404,6 +458,7 @@ function Field({
   type = "text",
   placeholder,
   hint,
+  error,
 }: {
   label: string;
   value: string;
@@ -412,6 +467,7 @@ function Field({
   type?: string;
   placeholder?: string;
   hint?: string;
+  error?: string;
 }) {
   return (
     <label className="flex flex-col gap-1.5">
@@ -420,13 +476,23 @@ function Field({
       </span>
       <input
         type={type}
-        required={required}
+        aria-required={required || undefined}
+        aria-invalid={error ? true : undefined}
         value={value}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        className="border border-taupe/40 bg-cream px-4 py-3.5 text-sm outline-none placeholder:text-taupe/70 focus:border-gold"
+        className={`border bg-cream px-4 py-3.5 text-sm outline-none placeholder:text-taupe/70 focus:border-gold ${
+          error ? "border-bordeaux bg-bordeaux/5 focus:border-bordeaux" : "border-taupe/40"
+        }`}
       />
-      {hint && <span className="text-xs text-taupe">{hint}</span>}
+      {error ? (
+        <span role="alert" className="flex items-center gap-1.5 text-xs font-medium text-bordeaux">
+          <Alert className="shrink-0 text-sm" />
+          {error}
+        </span>
+      ) : (
+        hint && <span className="text-xs text-taupe">{hint}</span>
+      )}
     </label>
   );
 }

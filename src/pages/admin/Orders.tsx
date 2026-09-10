@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { Card, PageHead, Pill, Btn, Select, Modal, useAdminAction, useUI, fcfa, th, td } from "../../components/admin/ui";
 import { useOrderPage, useUpdateOrder } from "../../hooks/useOrders";
-import { exportOrdersCsv, type Order, type OrderStatus } from "../../api/orders";
-import { Download, Truck, Check } from "../../components/icons";
+import { exportOrdersCsv, downloadInvoice, type Order, type OrderStatus } from "../../api/orders";
+import { Download, Truck, Check, Spinner } from "../../components/icons";
 import { downloadBlob, stampedName } from "../../utils/download";
 
-const flow: OrderStatus[] = ["En préparation", "Expédiée", "En cours de livraison", "Livrée"];
+const flow: OrderStatus[] = ["En préparation", "En cours de livraison", "Livrée"];
 const payTone = (p: Order["pay"]) => (p === "Payé" ? "green" : p === "En attente" ? "amber" : "red");
 const statusTone = (s: OrderStatus) =>
   s === "Livrée" ? "green" : s === "Retournée" ? "red" : s === "En préparation" ? "amber" : "blue";
@@ -43,6 +43,10 @@ export default function Orders() {
 
   const open = rows.find((o) => o.id === openId) ?? null;
 
+  // Vrai seulement pendant un changement de statut (pas un changement de
+  // livreur, qui passe par la même mutation) : c'est ce qui pilote le bouton.
+  const advancing = updateOrder.isPending && updateOrder.variables?.input.status !== undefined;
+
   /**
    * Export CSV. Le serveur renvoie un fichier : on le télécharge via une URL
    * temporaire d'objet, révoquée juste après pour ne pas fuir de mémoire.
@@ -57,6 +61,15 @@ export default function Orders() {
       toast("Export téléchargé");
     } catch {
       toast("L'export n'a pas pu être généré");
+    }
+  }
+
+  /** Reçu PDF de la commande, généré par le serveur. */
+  async function printReceipt(o: Order) {
+    try {
+      downloadBlob(await downloadInvoice(o.id), `recu-${o.id}.pdf`);
+    } catch {
+      toast("Le reçu n'a pas pu être téléchargé");
     }
   }
 
@@ -182,8 +195,14 @@ export default function Orders() {
 
           <div className="mt-4 rounded-lg border" style={{ borderColor: "var(--adm-border)" }}>
             {open.items.map((it, i) => (
-              <div key={i} className="flex justify-between border-b px-4 py-2.5 text-sm last:border-0" style={{ borderColor: "var(--adm-border)" }}>
-                <span style={{ color: "var(--adm-text)" }}>{it.name}{it.color ? ` - ${it.color}` : ""} × {it.qty}</span>
+              <div key={i} className="flex items-center gap-3 border-b px-4 py-2.5 text-sm last:border-0" style={{ borderColor: "var(--adm-border)" }}>
+                <img
+                  src={it.image}
+                  alt=""
+                  className="h-12 w-10 shrink-0 rounded object-cover"
+                  style={{ background: "var(--adm-hover)" }}
+                />
+                <span className="flex-1" style={{ color: "var(--adm-text)" }}>{it.name}{it.color ? ` - ${it.color}` : ""} × {it.qty}</span>
                 <span style={{ color: "var(--adm-muted)" }}>{fcfa(it.price * it.qty)}</span>
               </div>
             ))}
@@ -220,12 +239,18 @@ export default function Orders() {
               </Select>
             </label>
             <div className="flex items-end gap-2">
-              <Btn variant="ghost" onClick={() => window.open(`/commande/${open.id}`, "_blank", "noopener")}>
-                Reçu imprimable
+              <Btn variant="ghost" onClick={() => printReceipt(open)}>
+                <Download /> Imprimer
               </Btn>
-              <Btn onClick={() => advance(open)} disabled={open.status === "Livrée" || open.status === "Retournée"}>
-                <Truck /> Étape suivante
-              </Btn>
+              {open.status === "Livrée" ? (
+                <Btn onClick={() => setOpenId(null)}>
+                  <Check /> Terminer
+                </Btn>
+              ) : (
+                <Btn onClick={() => advance(open)} disabled={open.status === "Retournée" || advancing}>
+                  {advancing ? <Spinner /> : <Truck />} Étape suivante
+                </Btn>
+              )}
             </div>
           </div>
         </Modal>

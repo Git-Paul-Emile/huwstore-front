@@ -23,6 +23,8 @@ export type OrderItem = {
   color?: string;
   qty: number;
   price: number;
+  /** Visuel actuel du catalogue (déclinaison, sinon produit). Absent si l'article n'a plus d'image. */
+  image?: string;
 };
 
 export type Order = {

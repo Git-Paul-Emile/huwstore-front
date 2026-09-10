@@ -208,7 +208,7 @@ function Orders() {
   const addToCart = useCartStore((s) => s.addToCart);
   const [open, setOpen] = useState<Order | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-  const flow: OrderStatus[] = ["En préparation", "Expédiée", "Livrée"];
+  const flow: OrderStatus[] = ["En préparation", "En cours de livraison", "Livrée"];
 
   /** Télécharge la facture PDF émise par le serveur pour cette commande. */
   async function getInvoice(orderId: string) {
