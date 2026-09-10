@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/sitemap.xml",
-      "destination": "https://huwstore-api.onrender.com/sitemap.xml"
+      "destination": "https://api.huwstore.com/sitemap.xml"
     },
     { "source": "/(.*)", "destination": "/index.html" }
   ]

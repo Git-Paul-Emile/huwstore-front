@@ -289,6 +289,68 @@ function Orders() {
                     })}
                   </div>
                 )}
+                <div className="mb-4 rounded-lg border border-taupe/20">
+                  {o.items.map((it, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center gap-3 border-b border-taupe/15 px-3 py-2.5 text-sm last:border-0"
+                    >
+                      <img
+                        src={it.image}
+                        alt=""
+                        className="h-14 w-11 shrink-0 rounded bg-cream-tint object-cover"
+                      />
+                      <span className="flex-1">
+                        <span className="block text-anthracite">{it.name}</span>
+                        {it.color && <span className="block text-xs text-taupe">{it.color}</span>}
+                        <span className="block text-xs text-taupe">Quantité : {it.qty}</span>
+                      </span>
+                      <span className="whitespace-nowrap text-anthracite">{fcfa(it.price * it.qty)}</span>
+                    </div>
+                  ))}
+                  <div className="space-y-1 px-3 py-2.5 text-sm">
+                    <div className="flex justify-between text-taupe">
+                      <span>Sous-total</span>
+                      <span>{fcfa(o.subtotal)}</span>
+                    </div>
+                    <div className="flex justify-between text-taupe">
+                      <span>Livraison</span>
+                      <span>{o.shippingFee === 0 ? "Offerte" : fcfa(o.shippingFee)}</span>
+                    </div>
+                    {o.discount > 0 && (
+                      <div className="flex justify-between text-gold-deep">
+                        <span>Remise{o.promoCode ? ` (${o.promoCode})` : ""}</span>
+                        <span>−{fcfa(o.discount)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between border-t border-taupe/20 pt-1.5 font-medium text-ink">
+                      <span>Total</span>
+                      <span>{fcfa(o.total)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mb-4 grid gap-4 text-sm sm:grid-cols-2">
+                  <div>
+                    <p className="label-lux mb-1 text-taupe">Livraison</p>
+                    <p className="text-anthracite">{o.client}</p>
+                    <p className="text-taupe">{o.phone}</p>
+                    <p className="text-taupe">
+                      {o.addressLine}
+                      {o.landmark ? `, ${o.landmark}` : ""}
+                    </p>
+                    <p className="text-taupe">
+                      {o.city}, {o.country} - {o.deliveryMode}
+                    </p>
+                    {o.note && <p className="mt-1 italic text-taupe">Note : {o.note}</p>}
+                  </div>
+                  <div>
+                    <p className="label-lux mb-1 text-taupe">Paiement</p>
+                    <p className="text-anthracite">{o.method}</p>
+                    <p className="text-taupe">{o.pay}</p>
+                  </div>
+                </div>
+
                 {o.tracking && (
                   <p className="mb-3 text-sm text-taupe">
                     <Truck className="mr-1.5 inline text-gold-deep" />
