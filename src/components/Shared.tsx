@@ -24,7 +24,7 @@ export function ProductCard({ p }: { p: Product }) {
     <article className="group flex h-full flex-col">
       <button
         onClick={() => navigate(`/produit/${p.id}`)}
-        className="relative block aspect-[4/5] overflow-hidden rounded-xl bg-cream-tint text-left"
+        className="relative block aspect-[4/5] overflow-hidden rounded-lg bg-cream-tint text-left"
       >
         <img
           src={p.image}
@@ -77,7 +77,9 @@ export function ProductCard({ p }: { p: Product }) {
           disabled={soldOut}
           className="label-lux mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-gold py-3 text-ink transition-all hover:bg-gold-deep active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-taupe-soft disabled:text-taupe"
         >
-          <Bag className="text-base" />
+          {/* Icône masquée sur petit écran - demande du 12/09/2026 : le texte
+              « Ajouter au panier » tient mieux seul dans une carte étroite. */}
+          <Bag className="hidden text-base sm:inline" />
           {soldOut ? "Épuisé" : "Ajouter au panier"}
         </button>
       </div>

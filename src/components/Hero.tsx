@@ -1,39 +1,22 @@
 import { Link } from "react-router-dom";
 import { useLayoutStore } from "../store/useLayoutStore";
-import { ArrowRight } from "./icons";
 import heroFond from "../assets/hero-fond.webp";
 
 /**
  * Bandeau d'accueil : le texte est posé SUR la photo de la boutique.
  *
  * Ce choix annule la décision du 01/09/2026 (« le haut de la page n'affiche
- * aucune image en arrière-plan »), à la demande du 08/09/2026. L'objection
- * d'alors reste valable et elle est traitée ici, pas ignorée : un texte clair
- * posé sur un visuel n'est lisible que si le fond sous ce texte est CONTRÔLÉ.
+ * aucune image en arrière-plan »), à la demande du 08/09/2026.
  *
- * D'où trois couches empilées, dans cet ordre :
- *
- *   1. `FOND`  la photo, en `object-cover`. Elle contient déjà le sac : il n'y
- *              a plus d'image de sac séparée dans ce composant.
- *   2. `VOILE` un dégradé sombre, opaque à gauche (là où vit le texte) et
- *              transparent à droite (là où vit le sac). C'est LUI qui garantit
- *              le contraste, pas la chance du visuel.
- *   3. le texte.
- *
- * Contrastes MESURÉS sur le rendu, pixel par pixel, sur toute la boîte de
- * chaque texte, opacités comprises. Le pire cas de chaque zone :
- *
- *              surtitre   titre    slogan
- *   390 px     10,04:1   10,63:1   8,67:1
- *   768 px     10,28:1   11,71:1   9,87:1
- *   1280 px     7,66:1    9,59:1   8,91:1
- *
- * `rules/30-produit/ui.md` exige 4,5:1 pour le texte courant et 3:1 pour les
- * grands titres.
- *
- * Toute NOUVELLE photo de fond oblige à remesurer et, si elle est plus claire,
- * à remonter les opacités du voile. C'est la contrepartie du texte posé sur une
- * image : elle ne se saute pas.
+ * Le voile marron qui assombrissait la photo sous le texte (dégradé, voir
+ * l'historique) a été retiré le 12/09/2026 à la demande explicite du
+ * 12/09/2026. C'était LUI qui garantissait le contraste mesuré à l'époque
+ * (jusqu'à 11,7:1) ; sans lui, aucune garantie n'est plus mesurée, et le
+ * sur-titre « Sacs et petite maroquinerie » (`text-cream/85`, sans ombre
+ * portée) est le plus exposé si la photo devient plus claire à cet endroit.
+ * Le titre garde une ombre portée qui l'aide à rester lisible (voir plus
+ * bas), pas le sur-titre. Choix assumé, pas un oubli - à revoir si la
+ * lisibilité de ce bandeau redevient un sujet.
  *
  * La photo est un visuel de marque, pas une fiche produit : ce sac vert n'est
  * pas au catalogue. D'où `alt=""` (rien à annoncer au lecteur d'écran, le titre
@@ -80,26 +63,6 @@ import heroFond from "../assets/hero-fond.webp";
  */
 const CADRAGE_FOND = "object-[65%_50%] lg:object-[50%_62%]";
 
-/**
- * Couche 2, le voile. Il s'éteint avant le bord droit pour laisser le sac en
- * pleine lumière.
- *
- * DEUX voiles, et pas un seul, parce que le cadrage de la photo change à `lg`.
- * En dessous, `object-right` amène sous le texte le carton bleu clair et la
- * partie éclairée du kraft : avec le voile large, le slogan tombait à 3,6:1,
- * sous le minimum. Le voile étroit est plus opaque et s'éteint plus à droite.
- * À partir de `lg` la photo est cadrée au centre, sa moitié gauche est déjà
- * sombre, et le voile large suffit.
- *
- * Les opacités ne se règlent pas à l'oeil : les toucher, ou changer de photo,
- * oblige à remesurer (voir l'en-tête du fichier).
- */
-const VOILE_ETROIT =
-  "linear-gradient(to right, rgba(15,15,15,0.76) 0%, rgba(15,15,15,0.66) 55%, rgba(15,15,15,0.28) 85%, rgba(15,15,15,0) 100%)";
-
-const VOILE =
-  "linear-gradient(to right, rgba(15,15,15,0.62) 0%, rgba(15,15,15,0.46) 45%, rgba(15,15,15,0.12) 78%, rgba(15,15,15,0) 100%)";
-
 export default function Hero() {
   // Hauteur mesurée en temps réel par Header (bandeau d'annonce compris) : le
   // bandeau reste bas, il laisse voir le haut de la section suivante et signale
@@ -117,13 +80,6 @@ export default function Hero() {
         decoding="async"
         className={`absolute inset-0 h-full w-full object-cover ${CADRAGE_FOND}`}
       />
-      {/* Le voile passe par `style` et non par une classe `bg-[...]` : Tailwind
-          ne génère une classe arbitraire que s'il la lit TELLE QUELLE dans le
-          fichier. Une classe assemblée depuis une constante n'est jamais
-          produite, et la règle n'existerait pas dans le CSS final. */}
-      <div aria-hidden className="absolute inset-0 lg:hidden" style={{ backgroundImage: VOILE_ETROIT }} />
-      <div aria-hidden className="absolute inset-0 hidden lg:block" style={{ backgroundImage: VOILE }} />
-
       {/* `relative` sans `z-index` : la grille est un frère POSITIONNÉ qui vient
           après les deux couches dans le DOM, elle passe donc devant sans avoir
           à ouvrir une échelle de plans que le reste du site devrait respecter.
@@ -155,10 +111,6 @@ export default function Hero() {
             <br />
             <span className="italic">pour durer</span>
           </h1>
-
-          <p className="mt-4 max-w-sm text-sm leading-relaxed text-cream/90 md:mt-5 md:text-base">
-            Alliez style et praticité au quotidien.
-          </p>
         </div>
 
         {/* Pas de bloc dans la colonne de droite : le sac est DANS la photo de
@@ -172,21 +124,31 @@ export default function Hero() {
             la colonne de gauche en fait 183 px sur un téléphone de 390 px. Le
             bouton ne peut donc pas y tenir, à aucune taille de police
             raisonnable. Sur mobile il prend une ligne à lui, sur toute la
-            largeur ; à partir de `md` il revient sous la phrase, dans la
+            largeur ; à partir de `md` il revient sous le titre, dans la
             colonne de gauche.
 
             Un lien, pas un bouton : la destination est une page, elle doit
             pouvoir s'ouvrir dans un nouvel onglet au clic du milieu et être
             suivie par les moteurs de recherche.
 
-            Fond doré et texte encre, pas l'inverse : crème sur doré ne monte
-            qu'à 2,7:1, sous le minimum exigé. Là on est à 8,5:1. */}
+            Même fond, même survol que le bouton de `CategoryShowcase`, mais
+            sans sa flèche - demande explicite du 12/09/2026. Le focus clavier
+            garde son contour personnalisé (outline crème) parce que ce
+            bouton-ci se pose sur une photo et non sur le fond de page - un
+            focus par défaut du navigateur s'y verrait moins bien.
+
+            Fond doré et texte crème depuis le 12/09/2026, à la demande
+            explicite du 12/09/2026 malgré l'alerte donnée à ce moment-là :
+            crème sur ce doré ne monte qu'à 2,1:1, sous le minimum de 4,5:1
+            exigé par `rules/30-produit/ui.md`. Choix assumé, pas un oubli -
+            à revoir si l'accessibilité de ce bouton précis redevient un
+            sujet. */}
         <div className="animate-fade-up col-span-2 col-start-1 row-start-2 mt-6 md:col-span-1 md:mt-8 md:self-start">
           <Link
             to="/boutique"
-            className="label-lux inline-flex items-center gap-2 whitespace-nowrap rounded-full bg-gold px-6 py-3.5 text-ink shadow-[0_6px_20px_rgba(15,15,15,0.28)] transition-colors hover:bg-cream hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cream md:px-8 md:py-4"
+            className="label-lux inline-flex items-center gap-2 whitespace-nowrap rounded-full bg-gold px-6 py-3.5 text-cream transition-colors hover:bg-gold-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cream md:px-8 md:py-4"
           >
-            Découvrir la collection <ArrowRight />
+            Découvrir la collection
           </Link>
         </div>
       </div>

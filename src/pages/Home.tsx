@@ -6,6 +6,7 @@ import { ProductCard } from "../components/Shared";
 import TestimonialCard from "../components/TestimonialCard";
 import Hero from "../components/Hero";
 import PromoBanner from "../components/PromoBanner";
+import CategoryShowcase from "../components/CategoryShowcase";
 import UniverseSlider from "../components/UniverseSlider";
 import CardRail from "../components/CardRail";
 import { ArrowRight } from "../components/icons";
@@ -53,6 +54,14 @@ const TESTIMONIAL_AUTOPLAY_MS = 7000;
  */
 const PRODUCT_SLIDE = "shrink-0 basis-[62%] snap-start px-1.5 sm:basis-1/2 lg:basis-1/3 xl:basis-1/4";
 
+/**
+ * Largeur d'une case pour « Meilleures ventes » seulement : deux cartes
+ * visibles sur mobile, comme demandé le 12/09/2026, au lieu d'une carte et
+ * l'amorce de la suivante. Le glissement continu (`autoScroll`) n'est pas
+ * touché, seule cette largeur change.
+ */
+const BEST_SELLERS_SLIDE = "shrink-0 basis-1/2 snap-start px-1.5 lg:basis-1/3 xl:basis-1/4";
+
 /** Un témoignage à la fois sur mobile, le suivant amorcé sur le bord. */
 const TESTIMONIAL_SLIDE = "shrink-0 basis-[85%] snap-start px-1.5 sm:basis-1/2 lg:basis-1/3";
 
@@ -95,6 +104,10 @@ export default function Home() {
           elles défilent dans le ruban du haut, au-dessus du menu, et sur la
           seule page d'accueil. Voir `components/Header.tsx`. */}
 
+      {/* Aperçu en photos, ajouté le 12/09/2026 : les couvertures des quatre
+          premiers univers en grand, avant le rail complet ci-dessous. */}
+      <CategoryShowcase />
+
       {/* Univers : le classement par matière précède le classement par ventes,
           pour que la visiteuse choisisse d'abord une famille de sacs. */}
       <UniverseSlider />
@@ -112,6 +125,7 @@ export default function Home() {
           products={bestSellers}
           onSeeAll={() => navigate("/boutique?sort=best")}
           autoScroll
+          slideWidth={BEST_SELLERS_SLIDE}
         />
       )}
 
@@ -168,6 +182,7 @@ function ProductSection({
   onSeeAll,
   last = false,
   autoScroll = false,
+  slideWidth = PRODUCT_SLIDE,
 }: {
   id?: string;
   title: string;
@@ -176,6 +191,8 @@ function ProductSection({
   last?: boolean;
   /** Vrai pour la rangée qui glisse toute seule, en boucle. */
   autoScroll?: boolean;
+  /** Largeur de case, différente pour « Meilleures ventes » depuis le 12/09/2026. */
+  slideWidth?: string;
 }) {
   return (
     <section id={id} className={`mx-auto max-w-[1400px] scroll-mt-24 px-5 md:px-10 ${last ? "pb-14 md:pb-20" : "py-14 md:py-20"}`}>
@@ -183,7 +200,7 @@ function ProductSection({
 
       <CardRail
         slides={products.map((p) => <ProductCard key={p.id} p={p} />)}
-        slideWidth={PRODUCT_SLIDE}
+        slideWidth={slideWidth}
         label={title}
         continuousPxPerSecond={autoScroll ? BEST_SELLERS_SCROLL_PX_PER_SECOND : undefined}
         previousLabel="Produits précédents"

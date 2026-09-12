@@ -23,10 +23,10 @@ const AUTOPLAY_MS = 4500;
 const SKELETON_COUNT = 4;
 
 /**
- * Une case du rail : un peu plus d'une tuile visible sur mobile pour annoncer
- * la suite, puis deux, trois, quatre.
+ * Une case du rail : deux tuiles visibles sur mobile, comme demandé le
+ * 12/09/2026, puis trois et quatre.
  */
-const SLIDE_WIDTH = "shrink-0 basis-[72%] snap-start px-1.5 sm:basis-1/2 lg:basis-1/3 xl:basis-1/4";
+const SLIDE_WIDTH = "shrink-0 basis-1/2 snap-start px-1.5 lg:basis-1/3 xl:basis-1/4";
 
 /**
  * Boîte de la tuile, partagée avec le squelette : même format `4/5` que la

@@ -18,7 +18,7 @@ function Accordion({ title, children, open: initial = false }: { title: string; 
         <ChevronDown className={`text-taupe transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       <div className={`grid transition-all duration-300 ${open ? "grid-rows-[1fr] pb-5" : "grid-rows-[0fr]"}`}>
-        <div className="overflow-hidden text-sm leading-relaxed text-anthracite">{children}</div>
+        <div className="overflow-hidden text-justify text-sm leading-relaxed text-anthracite">{children}</div>
       </div>
     </div>
   );
@@ -320,7 +320,7 @@ export default function Product() {
             )}
           </div>
 
-          <p className="mt-5 text-sm leading-relaxed text-anthracite">{product.description}</p>
+          <p className="mt-5 text-justify text-sm leading-relaxed text-anthracite">{product.description}</p>
 
           {product.includedAccessory && (
             <p className="label-lux mt-4 border border-gold/40 bg-gold/10 px-3 py-2.5 text-anthracite">
@@ -342,8 +342,17 @@ export default function Product() {
             </div>
           )}
 
-          {/* Quantité + ajout au panier */}
-          <div className="mt-8 flex items-stretch gap-3">
+          {/* Quantité + ajout au panier.
+              Sur petit écran, icône et texte du bouton central passaient sur
+              deux lignes faute de place - demande du 12/09/2026 de les garder
+              sur une seule ligne. À partir de `sm`, il y a assez de place et
+              tout revient à la taille d'origine. En dessous, le sélecteur de
+              quantité et le bouton favoris cèdent la largeur qu'ils peuvent
+              sans descendre sous les 44 px de zone tactile minimale
+              (`rules/30-produit/ui.md`) : seul le chiffre affiché entre les
+              deux flèches (`w-8` -> `w-6`, pas un bouton) et l'écart entre
+              les trois éléments (`gap-3` -> `gap-2`) sont réduits. */}
+          <div className="mt-8 flex items-stretch gap-2 sm:gap-3">
             <div className="flex items-center border border-taupe/50">
               <button
                 onClick={() => setQty((q) => Math.max(1, q - 1))}
@@ -352,7 +361,7 @@ export default function Product() {
               >
                 <Minus />
               </button>
-              <span className="w-8 text-center text-sm tabular-nums">{qty}</span>
+              <span className="w-6 text-center text-sm tabular-nums sm:w-8">{qty}</span>
               <button
                 onClick={() => setQty((q) => Math.min(maxQty || q + 1, q + 1))}
                 disabled={qty >= maxQty}
@@ -365,15 +374,15 @@ export default function Product() {
             <button
               disabled={soldOut}
               onClick={() => variant && addToCart(product, variant, qty)}
-              className="group flex flex-1 items-center justify-center gap-2.5 bg-ink py-4 text-cream transition-all hover:bg-anthracite active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-taupe"
+              className="group flex flex-1 items-center justify-center gap-1.5 bg-ink py-4 text-cream transition-all hover:bg-anthracite active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-taupe sm:gap-2.5"
             >
               <Bag className="text-base" />
-              <span className="label-lux">{soldOut ? "Rupture de stock" : "Ajouter au panier"}</span>
+              <span className="label-lux whitespace-nowrap">{soldOut ? "Rupture de stock" : "Ajouter au panier"}</span>
             </button>
             <button
               onClick={() => toggleWish(product.id)}
               aria-label="Ajouter aux favoris"
-              className={`grid w-14 place-items-center border text-xl transition-colors ${
+              className={`grid w-11 place-items-center border text-xl transition-colors sm:w-14 ${
                 wished ? "border-gold text-gold" : "border-taupe/50 text-ink hover:border-gold hover:text-gold-deep"
               }`}
             >
