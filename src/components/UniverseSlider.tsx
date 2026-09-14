@@ -49,8 +49,10 @@ export default function UniverseSlider() {
 
   return (
     <section aria-labelledby="nos-univers" className="mx-auto max-w-[1400px] px-5 pt-14 pb-6 md:px-10 md:pt-16 md:pb-8">
+      {/* Titre en noir uni, sans italique doré - demande du 14/09/2026 : les
+          deux couleurs juraient avec le reste de la page. */}
       <h2 id="nos-univers" className="serif mb-8 text-center text-[1.6rem] leading-tight sm:text-3xl md:mb-10 md:text-4xl">
-        Nos <span className="italic text-gold-deep">univers</span>
+        Nos univers
       </h2>
 
       <CardRail

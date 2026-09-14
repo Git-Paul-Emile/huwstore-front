@@ -218,8 +218,11 @@ export default function Header() {
 
           {/* icônes, à droite */}
           <div className="flex items-center justify-end gap-3.5 justify-self-end text-[1.2rem] text-ink">
+            {/* `state: { focusSearch: true }` : `Listing` place le curseur dans
+                son champ de recherche à l'arrivée - demande du 14/09/2026,
+                pour ne pas forcer un clic de plus une fois sur la boutique. */}
             <button
-              onClick={() => navigate("/boutique")}
+              onClick={() => navigate("/boutique", { state: { focusSearch: true } })}
               aria-label="Rechercher dans la boutique"
               className="transition-colors hover:text-gold-deep"
             >

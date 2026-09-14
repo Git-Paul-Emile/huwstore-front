@@ -1,16 +1,17 @@
 import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useProducts } from "../hooks/useProducts";
+import { useProduct, useProducts } from "../hooks/useProducts";
 import { useTestimonials } from "../hooks/useTestimonials";
 import { ProductCard } from "../components/Shared";
 import TestimonialCard from "../components/TestimonialCard";
 import Hero from "../components/Hero";
 import PromoBanner from "../components/PromoBanner";
-import CategoryShowcase from "../components/CategoryShowcase";
+import FeaturedProducts from "../components/FeaturedProducts";
 import UniverseSlider from "../components/UniverseSlider";
 import CardRail from "../components/CardRail";
 import { ArrowRight } from "../components/icons";
 import { useSeo } from "../hooks/useSeo";
+import type { Product } from "../data";
 
 /**
  * Page d'accueil.
@@ -47,31 +48,34 @@ const BEST_SELLERS_SCROLL_PX_PER_SECOND = 70;
 const TESTIMONIAL_AUTOPLAY_MS = 7000;
 
 /**
- * Largeur d'une case du rail produits. `basis-[62%]` sur mobile : la carte
- * suivante dépasse d'un tiers, ce qui annonce qu'il y a d'autres produits à
- * droite. Une case pleine largeur ne le dirait pas, et deux cases entières
- * rendraient les photos trop petites pour juger d'un sac.
+ * Largeur d'une case du rail produits : deux cartes visibles sur mobile,
+ * comme « Nos univers » et « Meilleures ventes » - demande du 14/09/2026,
+ * qui unifie cette largeur pour les trois bandes de la page d'accueil.
+ * Auparavant « Nouveautés » gardait une case à 62 %, une carte et l'amorce
+ * de la suivante, plus grande que ses deux voisines.
  */
-const PRODUCT_SLIDE = "shrink-0 basis-[62%] snap-start px-1.5 sm:basis-1/2 lg:basis-1/3 xl:basis-1/4";
-
-/**
- * Largeur d'une case pour « Meilleures ventes » seulement : deux cartes
- * visibles sur mobile, comme demandé le 12/09/2026, au lieu d'une carte et
- * l'amorce de la suivante. Le glissement continu (`autoScroll`) n'est pas
- * touché, seule cette largeur change.
- */
-const BEST_SELLERS_SLIDE = "shrink-0 basis-1/2 snap-start px-1.5 lg:basis-1/3 xl:basis-1/4";
+const PRODUCT_SLIDE = "shrink-0 basis-1/2 snap-start px-1.5 lg:basis-1/3 xl:basis-1/4";
 
 /** Un témoignage à la fois sur mobile, le suivant amorcé sur le bord. */
 const TESTIMONIAL_SLIDE = "shrink-0 basis-[85%] snap-start px-1.5 sm:basis-1/2 lg:basis-1/3";
+
+/**
+ * Deux modèles retirés de « Meilleures ventes » malgré leur rang réel, deux
+ * autres épinglés malgré le leur - demande du 14/09/2026. Les deux places
+ * restantes suivent toujours le vrai classement par ventes : voir
+ * `useBestSellers` ci-dessous. Cette section ne devient pas une sélection
+ * entièrement faite à la main, seuls ces quatre modèles sont fixés dans le
+ * code.
+ */
+const BEST_SELLERS_EXCLUDED_IDS = ["sac-a-dos-en-tissu-oxford", "sac-banane-urbain"];
+const BEST_SELLERS_PINNED_IDS = ["sac-main-patchwork-pu", "tote-bag-velours-cotele"];
+const BEST_SELLERS_COUNT = 4;
 
 export default function Home() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // « Meilleures ventes » vient des quantités réellement commandées, calculées
-  // par l'API : c'est un classement, pas une sélection faite à la main.
-  const { data: bestSellers = [] } = useProducts({ sort: "best", limit: 4 });
+  const bestSellers = useBestSellers();
   const { data: newProducts = [] } = useProducts({ sort: "new", limit: 8 });
   const { data: testimonials = [] } = useTestimonials();
 
@@ -104,9 +108,10 @@ export default function Home() {
           elles défilent dans le ruban du haut, au-dessus du menu, et sur la
           seule page d'accueil. Voir `components/Header.tsx`. */}
 
-      {/* Aperçu en photos, ajouté le 12/09/2026 : les couvertures des quatre
-          premiers univers en grand, avant le rail complet ci-dessous. */}
-      <CategoryShowcase />
+      {/* Aperçu en photos : quatre modèles choisis à la main, avant le rail
+          complet ci-dessous - demande du 14/09/2026, qui remplace les
+          couvertures d'univers affichées ici jusque-là. */}
+      <FeaturedProducts />
 
       {/* Univers : le classement par matière précède le classement par ventes,
           pour que la visiteuse choisisse d'abord une famille de sacs. */}
@@ -125,7 +130,6 @@ export default function Home() {
           products={bestSellers}
           onSeeAll={() => navigate("/boutique?sort=best")}
           autoScroll
-          slideWidth={BEST_SELLERS_SLIDE}
         />
       )}
 
@@ -134,23 +138,25 @@ export default function Home() {
         <ProductSection id="nouveautes" title="Nouveautés" products={newProducts} onSeeAll={() => navigate("/boutique")} last />
       )}
 
-      {/* Retours de clientes : contenu saisi depuis le back-office.
+      {/* Retours de clients : contenu saisi depuis le back-office.
 
           La bande occupe toute la largeur au lieu d'être une carte arrondie
           posée dans la grille : elle marque une respiration entre les rangées
           de produits et le pied de page, et le demi-ton beige suffit à la
-          séparer sans ajouter de bordure. */}
+          séparer sans ajouter de bordure.
+
+          Titre en noir uni, sans italique doré - demande du 14/09/2026. */}
       {testimonials.length > 0 && (
         <section aria-labelledby="temoignages" className="bg-cream-tint py-14 md:py-20">
           <div className="mx-auto max-w-[1400px] px-5 md:px-10">
             <h2 id="temoignages" className="serif mb-8 text-center text-[1.6rem] leading-tight sm:text-3xl md:mb-10 md:text-4xl">
-              Les retours de nos <span className="italic text-gold-deep">clientes</span>
+              Les retours de nos clients
             </h2>
 
             <CardRail
               slides={testimonials.map((t) => <TestimonialCard key={t.id} testimonial={t} />)}
               slideWidth={TESTIMONIAL_SLIDE}
-              label="Les retours de nos clientes"
+              label="Les retours de nos clients"
               autoplayMs={TESTIMONIAL_AUTOPLAY_MS}
               previousLabel="Témoignages précédents"
               nextLabel="Témoignages suivants"
@@ -160,6 +166,24 @@ export default function Home() {
       )}
     </div>
   );
+}
+
+/**
+ * Classement réel de `sort: "best"`, moins les modèles exclus et épinglés
+ * (pour ne pas les compter deux fois), complété par les modèles épinglés en
+ * tête. Les épinglés sont récupérés à part : rien ne garantit qu'ils
+ * figurent dans les meilleures ventes réelles.
+ */
+function useBestSellers(): Product[] {
+  const excludedAndPinned = [...BEST_SELLERS_EXCLUDED_IDS, ...BEST_SELLERS_PINNED_IDS];
+  const { data: ranked = [] } = useProducts({ sort: "best", limit: BEST_SELLERS_COUNT + excludedAndPinned.length });
+  const pinnedA = useProduct(BEST_SELLERS_PINNED_IDS[0]);
+  const pinnedB = useProduct(BEST_SELLERS_PINNED_IDS[1]);
+
+  const pinned = [pinnedA.data, pinnedB.data].filter((p): p is Product => !!p);
+  const remaining = ranked.filter((p) => !excludedAndPinned.includes(p.id));
+
+  return [...pinned, ...remaining].slice(0, BEST_SELLERS_COUNT);
 }
 
 /**
@@ -191,7 +215,7 @@ function ProductSection({
   last?: boolean;
   /** Vrai pour la rangée qui glisse toute seule, en boucle. */
   autoScroll?: boolean;
-  /** Largeur de case, différente pour « Meilleures ventes » depuis le 12/09/2026. */
+  /** Largeur de case. Les deux rangées de produits partagent la même depuis le 14/09/2026. */
   slideWidth?: string;
 }) {
   return (

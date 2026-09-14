@@ -101,7 +101,20 @@ export default function Hero() {
         style={{ minHeight: `calc(52vh - ${headerHeight}px)` }}
       >
         <div className="animate-fade-up col-start-1 row-start-1 self-start text-left md:self-center">
-          <p className="label-lux text-cream/85">Sacs et petite maroquinerie</p>
+          {/* Taille réduite sur mobile - demande du 14/09/2026 : à la taille
+              normale de `.label-lux` (0,68 rem), la phrase passait sur une
+              deuxième ligne. La colonne de texte ne fait que 183 px sur un
+              téléphone de 390 px (voir plus bas) : à 0,5 rem la phrase tient
+              sur une ligne à cette largeur et aux largeurs courantes
+              au-dessus ; sous 375 px environ (petits Android, iPhone SE)
+              elle peut encore passer à la ligne, la colonne devenant alors
+              trop étroite pour toute réduction de police raisonnable.
+
+              `!` obligatoire : `.label-lux` (classe CSS classique, hors
+              `@layer`) passe toujours devant les utilitaires Tailwind, quel
+              que soit leur ordre dans le fichier - seul `!important` (donc
+              le suffixe `!`) peut l'emporter sur sa taille de police. */}
+          <p className="label-lux text-[0.5rem]! text-cream/85 sm:text-[0.68rem]!">Sacs et petite maroquinerie</p>
 
           {/* L'ombre portée n'est pas décorative : elle tient le titre lisible
               si le fond passe un jour à une vraie photo, plus claire par
@@ -131,7 +144,7 @@ export default function Hero() {
             pouvoir s'ouvrir dans un nouvel onglet au clic du milieu et être
             suivie par les moteurs de recherche.
 
-            Même fond, même survol que le bouton de `CategoryShowcase`, mais
+            Même fond, même survol que le bouton de `FeaturedProducts`, mais
             sans sa flèche - demande explicite du 12/09/2026. Le focus clavier
             garde son contour personnalisé (outline crème) parce que ce
             bouton-ci se pose sur une photo et non sur le fond de page - un
@@ -142,11 +155,17 @@ export default function Hero() {
             crème sur ce doré ne monte qu'à 2,1:1, sous le minimum de 4,5:1
             exigé par `rules/30-produit/ui.md`. Choix assumé, pas un oubli -
             à revoir si l'accessibilité de ce bouton précis redevient un
-            sujet. */}
+            sujet.
+
+            Plus petit sur mobile (`px-5 py-2.5`, texte à 0,6 rem au lieu de
+            0,68 rem, `!` requis pour la même raison que le sur-titre
+            ci-dessus) - demande du 14/09/2026 : un bouton plus bas sur cette
+            ligne dégage les anses du sac vert juste au-dessus. À partir de
+            `sm` il retrouve sa taille normale. */}
         <div className="animate-fade-up col-span-2 col-start-1 row-start-2 mt-6 md:col-span-1 md:mt-8 md:self-start">
           <Link
             to="/boutique"
-            className="label-lux inline-flex items-center gap-2 whitespace-nowrap rounded-full bg-gold px-6 py-3.5 text-cream transition-colors hover:bg-gold-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cream md:px-8 md:py-4"
+            className="label-lux inline-flex items-center gap-2 whitespace-nowrap rounded-full bg-gold px-5 py-2.5 text-[0.6rem]! text-cream transition-colors hover:bg-gold-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cream sm:px-6 sm:py-3.5 sm:text-[0.68rem]! md:px-8 md:py-4"
           >
             Découvrir la collection
           </Link>

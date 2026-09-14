@@ -45,7 +45,7 @@ export default function Testimonials() {
     <div>
       <PageHead
         title="Témoignages clients"
-        sub={`Section « Les retours de nos clientes » - ${rows.filter((t) => t.active).length} affiché(s)`}
+        sub={`Section « Les retours de nos clients » - ${rows.filter((t) => t.active).length} affiché(s)`}
         action={<Btn onClick={() => setEditing("new")}><Plus /> Nouveau témoignage</Btn>}
       />
 

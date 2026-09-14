@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useCategories } from "../hooks/useCategories";
 import { useProductFacets, useProductPage } from "../hooks/useProducts";
 import { fcfa } from "../data";
@@ -31,6 +31,9 @@ function FilterGroup({ title, children, open: init = true }: { title: string; ch
 export default function Listing() {
   const { category } = useParams<{ category?: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const { data: categories = [] } = useCategories();
   const { data: facets } = useProductFacets();
 
@@ -72,6 +75,20 @@ export default function Listing() {
     const fromUrl = searchParams.get("q") ?? "";
     setSearch((current) => (current.trim() === fromUrl ? current : fromUrl));
   }, [searchParams]);
+
+  /**
+   * Curseur déjà actif dans le champ en arrivant depuis la loupe du menu -
+   * demande du 14/09/2026. `state.focusSearch` vient de `Header` ; il est
+   * effacé aussitôt lu pour qu'un rafraîchissement ou un retour arrière sur
+   * cette même page ne vole pas le focus une seconde fois.
+   */
+  useEffect(() => {
+    if (!(location.state as { focusSearch?: boolean } | null)?.focusSearch) return;
+    searchInputRef.current?.focus();
+    searchInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    navigate(`${location.pathname}${location.search}`, { replace: true, state: null });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state]);
 
   // Le tri suit la même logique que la recherche : il vit dans l'URL (?sort=),
   // pour qu'un lien « Meilleures ventes » partagé depuis l'accueil ouvre la
@@ -227,6 +244,7 @@ export default function Listing() {
           <div className="mb-4 flex items-center gap-3 border border-taupe/35 px-4 focus-within:border-gold">
             <SearchIcon className="shrink-0 text-lg text-taupe" />
             <input
+              ref={searchInputRef}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Rechercher un sac, une matiere, un coloris…"
