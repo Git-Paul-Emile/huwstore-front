@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/useAuthStore";
 import { useToastStore } from "../store/useToastStore";
 import { useLogin, useRegister } from "../hooks/useAuth";
@@ -11,6 +11,7 @@ export default function AuthModal() {
   const authOpen = useAuthStore((s) => s.authOpen);
   const setAuthOpen = useAuthStore((s) => s.setAuthOpen);
   const toast = useToastStore((s) => s.toast);
+  const navigate = useNavigate();
   const loginMutation = useLogin();
   const registerMutation = useRegister();
 
@@ -26,10 +27,24 @@ export default function AuthModal() {
 
   const close = () => setAuthOpen(false);
 
+  /**
+   * Cette fenêtre s'ouvre depuis n'importe quelle page publique : une
+   * cliente s'y connecte pour commander, mais l'administratrice de la
+   * boutique peut tout aussi bien s'en servir plutôt que de retaper l'URL
+   * `/admin` - demande du 14/09/2026. On l'y envoie donc directement une
+   * fois connectée ; une cliente ordinaire reste sur la page qu'elle
+   * consultait.
+   */
   const submitLogin = () => {
     loginMutation.mutate(
       { phone, password },
-      { onSuccess: () => toast("Bienvenue !"), onError: () => toast("Identifiants invalides.") },
+      {
+        onSuccess: (session) => {
+          toast("Bienvenue !");
+          if (session.user.role === "ADMIN") navigate("/admin");
+        },
+        onError: () => toast("Identifiants invalides."),
+      },
     );
   };
 

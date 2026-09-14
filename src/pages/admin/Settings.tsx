@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Card, PageHead, Pill, Btn, Input, useAdminAction, useUI, fcfa } from "../../components/admin/ui";
+import { Card, PageHead, Btn, Input, useAdminAction, useUI, fcfa } from "../../components/admin/ui";
 import {
   useCreateDeliveryZone,
   useDeleteDeliveryZone,
@@ -27,6 +27,9 @@ const EMPTY: ShopSettings = {
   country: "",
 };
 
+/** Une centaine de zones tiennent difficilement sur un seul écran - demande du 14/09/2026. */
+const ZONES_PER_PAGE = 10;
+
 export default function Settings() {
   const { toast } = useUI();
   const run = useAdminAction();
@@ -41,6 +44,16 @@ export default function Settings() {
   const [form, setForm] = useState<ShopSettings>(EMPTY);
   const [error, setError] = useState<string | null>(null);
   const [zoneFormOpen, setZoneFormOpen] = useState(false);
+  const [zonePage, setZonePage] = useState(1);
+
+  // Ordre alphabétique, pas celui de l'API : une zone ajoutée ou renommée doit
+  // se retrouver à sa place sans attendre un tri côté serveur.
+  const sortedZones = [...deliveryZones].sort((a, b) => a.city.localeCompare(b.city, "fr"));
+  const zonePageCount = Math.max(1, Math.ceil(sortedZones.length / ZONES_PER_PAGE));
+  // Supprimer la dernière zone d'une page ne doit pas laisser l'écran sur une
+  // page devenue vide.
+  const currentZonePage = Math.min(zonePage, zonePageCount);
+  const pagedZones = sortedZones.slice((currentZonePage - 1) * ZONES_PER_PAGE, currentZonePage * ZONES_PER_PAGE);
 
   // Le formulaire est alimenté dès que les paramètres arrivent du serveur.
   useEffect(() => {
@@ -144,27 +157,6 @@ export default function Settings() {
         </Card>
 
         <Card className="p-5 lg:col-span-2">
-          <h3 className="serif text-lg" style={{ color: "var(--adm-text)" }}>Encaissement</h3>
-          <p className="mt-3 text-sm" style={{ color: "var(--adm-muted)" }}>
-            Sur Dakar, la boutique encaisse <strong style={{ color: "var(--adm-text)" }}>à la livraison</strong>, en
-            espèces. Pour les autres régions, la commande est confirmée par un paiement <strong style={{ color: "var(--adm-text)" }}>Wave
-            ou Orange Money</strong> reçu hors du site, dont la preuve arrive par WhatsApp ; l'expédition suit cette
-            confirmation. Aucun paiement ne passe par le site et aucune coordonnée bancaire n'est collectée - ni sur
-            le site, ni en base.
-          </p>
-          <div className="mt-4 flex flex-col gap-2">
-            <div className="flex items-center justify-between rounded-lg border px-4 py-3" style={{ borderColor: "var(--adm-border)" }}>
-              <span className="font-medium" style={{ color: "var(--adm-text)" }}>Espèces à la livraison - Dakar</span>
-              <Pill tone="green">Actif</Pill>
-            </div>
-            <div className="flex items-center justify-between rounded-lg border px-4 py-3" style={{ borderColor: "var(--adm-border)" }}>
-              <span className="font-medium" style={{ color: "var(--adm-text)" }}>Wave ou Orange Money hors site - autres régions</span>
-              <Pill tone="green">Actif</Pill>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-5 lg:col-span-2">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h3 className="serif text-lg" style={{ color: "var(--adm-text)" }}>Zones de livraison</h3>
@@ -198,7 +190,7 @@ export default function Settings() {
           )}
 
           <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-            {deliveryZones.map((zone) => (
+            {pagedZones.map((zone) => (
               <div key={zone.id} className="rounded-lg border p-3" style={{ borderColor: "var(--adm-border)" }}>
                 <p className="font-medium" style={{ color: "var(--adm-text)" }}>{zone.city}</p>
                 <p className="text-xs" style={{ color: "var(--adm-muted)" }}>{zone.country} - {zone.delay}</p>
@@ -257,6 +249,26 @@ export default function Settings() {
               </div>
             ))}
           </div>
+
+          {zonePageCount > 1 && (
+            <div className="mt-4 flex items-center justify-between gap-3">
+              <p className="text-xs" style={{ color: "var(--adm-muted)" }}>
+                Page {currentZonePage} sur {zonePageCount} - {sortedZones.length} zones
+              </p>
+              <div className="flex gap-2">
+                <Btn variant="ghost" disabled={currentZonePage <= 1} onClick={() => setZonePage(currentZonePage - 1)}>
+                  Précédent
+                </Btn>
+                <Btn
+                  variant="ghost"
+                  disabled={currentZonePage >= zonePageCount}
+                  onClick={() => setZonePage(currentZonePage + 1)}
+                >
+                  Suivant
+                </Btn>
+              </div>
+            </div>
+          )}
         </Card>
       </div>
     </div>

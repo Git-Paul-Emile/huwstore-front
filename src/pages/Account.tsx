@@ -2,7 +2,7 @@ import { useState, type FormEvent, type ReactElement } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuthStore } from "../store/useAuthStore";
 import { useCartStore } from "../store/useCartStore";
-import { useUpdateProfile } from "../hooks/useAuth";
+import { useLogout, useUpdateProfile } from "../hooks/useAuth";
 import { downloadInvoice } from "../api/orders";
 import { readApiError } from "../api/axiosConfig";
 import { useToastStore } from "../store/useToastStore";
@@ -47,8 +47,17 @@ const statusTone: Record<OrderStatus, string> = {
 
 export default function Account() {
   const user = useAuthStore((s) => s.user);
-  const logout = useAuthStore((s) => s.logout);
   const navigate = useNavigate();
+  /**
+   * `useLogout()`, pas `useAuthStore((s) => s.logout)` directement : ce
+   * dernier ne fait qu'oublier la session dans le navigateur. Sans l'appel à
+   * `/auth/logout`, le cookie de rafraîchissement reste valide côté serveur,
+   * et la prochaine restauration de session (un rechargement complet, par
+   * exemple après une page 404) reconnecte silencieusement - demande du
+   * 14/09/2026, en réponse à ce comportement observé.
+   */
+  const logoutMutation = useLogout();
+  const logout = () => logoutMutation.mutate(undefined, { onSettled: () => navigate("/") });
   const [searchParams] = useSearchParams();
   // Le lien favoris de l'en-tête ouvre directement l'onglet (/compte?tab=wishlist).
   const requestedTab = searchParams.get("tab");
