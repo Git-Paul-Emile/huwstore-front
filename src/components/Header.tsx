@@ -24,9 +24,9 @@ import logoDark from "../assets/logo1.svg";
  * seconde ligne où poser un détail.
  */
 const PROMESSES = [
-  "Livrée partout au Sénégal : Dakar, banlieue et régions",
-  "Livraison 24 h sur Dakar sauf le dimanche, 72 h en région",
-  "Paiement en espèces à la livraison sur Dakar, Wave ou Orange Money en région",
+  "Livraison partout au Sénégal",
+  "Livraison en moins de 24 h à Dakar sauf les dimanches",
+  "Modes de paiement : espèces, Wave ou Orange Money",
 ];
 
 /**

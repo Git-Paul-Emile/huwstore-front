@@ -96,9 +96,15 @@ export default function Hero() {
           À partir de `md` `auto 1fr` : la première ligne se règle sur le texte
           et la seconde prend le mou, le bouton restant en haut de la sienne
           (`md:self-start`). Le sac couvre les deux. */}
+      {/* `svh` et non `vh` (demande du 16/09/2026) : sur mobile, `vh` se
+          recalcule sur la barre d'adresse qui se réduit pendant le scroll, la
+          section grandit alors sous l'image en `object-cover` et donne
+          l'impression d'un zoom involontaire au visiteur. `svh` se cale sur
+          la plus petite hauteur de viewport possible (barre visible) et ne
+          bouge plus une fois la page chargée. */}
       <div
         className="relative mx-auto grid max-w-[1400px] grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)] items-center gap-x-3 px-5 py-9 grid-rows-[1fr_auto] sm:gap-x-6 sm:px-8 md:grid-rows-[auto_1fr] md:gap-x-10 md:px-12 md:py-14 lg:px-16"
-        style={{ minHeight: `calc(52vh - ${headerHeight}px)` }}
+        style={{ minHeight: `calc(52svh - ${headerHeight}px)` }}
       >
         <div className="animate-fade-up col-start-1 row-start-1 self-start text-left md:self-center">
           {/* Taille réduite sur mobile - demande du 14/09/2026 : à la taille
