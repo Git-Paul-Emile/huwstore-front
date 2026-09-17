@@ -1,7 +1,7 @@
 import { useState, type FormEvent, type ReactElement } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuthStore } from "../store/useAuthStore";
-import { useCartStore } from "../store/useCartStore";
+import { useCart } from "../hooks/useCart";
 import { useLogout, useUpdateProfile } from "../hooks/useAuth";
 import { downloadInvoice } from "../api/orders";
 import { readApiError } from "../api/axiosConfig";
@@ -214,7 +214,7 @@ function Orders() {
   const shop = useShop();
   const { data: orders = [] } = useMyOrders();
   const { data: products = [] } = useProducts();
-  const addToCart = useCartStore((s) => s.addToCart);
+  const { addToCart } = useCart();
   const [open, setOpen] = useState<Order | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const flow: OrderStatus[] = ["En préparation", "En cours de livraison", "Livrée"];
@@ -252,7 +252,7 @@ function Orders() {
         missing += 1;
         continue;
       }
-      for (let i = 0; i < item.qty; i++) addToCart(product, variant);
+      addToCart(product, variant, item.qty);
       added += 1;
     }
 

@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useCartStore, useCartTotals } from "../store/useCartStore";
 import { useAuthStore } from "../store/useAuthStore";
 import { useDeliveryZones } from "../hooks/useDeliveryZones";
+import { useCart } from "../hooks/useCart";
 import { fcfa } from "../data";
 import { Close, Plus, Minus, ArrowRight } from "./icons";
 
@@ -9,14 +10,12 @@ export default function CartDrawer() {
   const navigate = useNavigate();
   const cartOpen = useCartStore((s) => s.cartOpen);
   const setCartOpen = useCartStore((s) => s.setCartOpen);
-  const cart = useCartStore((s) => s.cart);
-  const setQty = useCartStore((s) => s.setQty);
-  const remove = useCartStore((s) => s.remove);
+  const { cart, setQty, remove } = useCart();
   const zone = useCartStore((s) => s.zone);
   const setZone = useCartStore((s) => s.setZone);
   const user = useAuthStore((s) => s.user);
   const setAuthOpen = useAuthStore((s) => s.setAuthOpen);
-  const { subtotal, count, shipping } = useCartTotals();
+  const { subtotal, count, shipping } = useCartTotals(cart);
   const { data: zones = [] } = useDeliveryZones();
 
   if (!cartOpen) return null;

@@ -5,6 +5,7 @@ import { useAuthStore } from "../store/useAuthStore";
 import { useToastStore } from "../store/useToastStore";
 import { useDeliveryZones } from "../hooks/useDeliveryZones";
 import { useAddresses } from "../hooks/useAddresses";
+import { useCart } from "../hooks/useCart";
 import { useCreateOrder } from "../hooks/useOrders";
 import { validatePromo, type PromoQuote } from "../api/promos";
 import { PAY_METHOD_COD, type DeliveryMode } from "../api/orders";
@@ -51,8 +52,7 @@ export default function Checkout() {
   useSeo({ title: "Finaliser ma commande", noindex: true });
 
 
-  const cart = useCartStore((s) => s.cart);
-  const clear = useCartStore((s) => s.clear);
+  const { cart, clear } = useCart();
   const zone = useCartStore((s) => s.zone);
   const setZone = useCartStore((s) => s.setZone);
 

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useProduct, useProducts } from "../hooks/useProducts";
-import { useCartStore } from "../store/useCartStore";
+import { useCart } from "../hooks/useCart";
 import { useWishlist } from "../hooks/useWishlist";
 import { useSeo } from "../hooks/useSeo";
 import { cm, dimensionLabels, fcfa, grams, type ProductVariant } from "../data";
@@ -63,7 +63,7 @@ type GalleryItem = {
 export default function Product() {
   const { id = "" } = useParams<{ id: string }>();
   const { data: product, isLoading } = useProduct(id);
-  const addToCart = useCartStore((s) => s.addToCart);
+  const { addToCart } = useCart();
   const { has, toggle: toggleWish } = useWishlist();
 
   const [variantSlug, setVariantSlug] = useState<string | null>(null);

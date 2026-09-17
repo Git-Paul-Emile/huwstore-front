@@ -7,10 +7,13 @@ import ScrollTopButton from "../components/ScrollTopButton";
 import AuthModal from "../components/AuthModal";
 import Toasts from "../components/Toasts";
 import { useWishlistSync } from "../hooks/useWishlist";
+import { useCartSync } from "../hooks/useCart";
 
 export default function MainLayout() {
-  // Verse les favoris pris avant connexion dans le compte, une fois connectee.
+  // Verse les favoris et le panier pris avant connexion dans le compte, une
+  // fois connectee.
   useWishlistSync();
+  useCartSync();
 
   return (
     <div className="flex min-h-screen flex-col bg-cream">

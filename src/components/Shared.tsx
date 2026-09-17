@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import type { Product } from "../data";
 import { fcfa } from "../data";
-import { useCartStore } from "../store/useCartStore";
+import { useCart } from "../hooks/useCart";
 import { useWishlist } from "../hooks/useWishlist";
 import { Heart, Bag } from "./icons";
 
@@ -14,7 +14,7 @@ const badgeStyle: Record<string, string> = {
 export function ProductCard({ p }: { p: Product }) {
   const navigate = useNavigate();
   const { has, toggle: toggleWish } = useWishlist();
-  const addToCart = useCartStore((s) => s.addToCart);
+  const { addToCart } = useCart();
   const wished = has(p.id);
   // Sur une carte produit on n'a pas de sélecteur de couleur : on ajoute la
   // première déclinaison encore en stock, l'acheteur peut la changer ensuite.

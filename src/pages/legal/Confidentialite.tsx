@@ -94,8 +94,9 @@ export default function Confidentialite() {
           déconnexion et ne servent à rien d'autre.
         </p>
         <p>
-          Votre panier et vos favoris, eux, restent dans la mémoire de votre navigateur, sur votre appareil : ils ne
-          nous sont envoyés qu'au moment où vous passez commande.
+          Votre panier reste dans la mémoire de votre navigateur tant que vous n'avez pas de compte connecté : rien
+          n'est envoyé au serveur avant que vous ne le validiez. Dès que vous vous connectez, il rejoint votre
+          compte pour vous suivre d'un appareil à l'autre, comme vos favoris, qui eux exigent déjà un compte.
         </p>
       </Section>
 

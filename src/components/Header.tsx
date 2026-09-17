@@ -6,6 +6,7 @@ import { useLayoutStore } from "../store/useLayoutStore";
 import { useCategories } from "../hooks/useCategories";
 import { useDeliveryZones } from "../hooks/useDeliveryZones";
 import { useWishlist } from "../hooks/useWishlist";
+import { useCart } from "../hooks/useCart";
 import { useShop } from "../hooks/useSettings";
 import { Search, User, Heart, Bag, Menu, Close } from "./icons";
 import logo from "../assets/logo1.svg";
@@ -47,7 +48,8 @@ export default function Header() {
   const navigate = useNavigate();
   const location = useLocation();
   const shop = useShop();
-  const { count } = useCartTotals();
+  const { cart } = useCart();
+  const { count } = useCartTotals(cart);
   const { ids: wishlist } = useWishlist();
   const setCartOpen = useCartStore((s) => s.setCartOpen);
   const zone = useCartStore((s) => s.zone);

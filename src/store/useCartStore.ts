@@ -98,10 +98,17 @@ export const useCartStore = create<CartState>()(
   ),
 );
 
-/** Livraison offerte au-delà du seuil de la zone (ou panier vide). */
-export function useCartTotals() {
-  const cart = useCartStore((s) => s.cart);
+/**
+ * Livraison offerte au-delà du seuil de la zone (ou panier vide).
+ *
+ * Sans argument, calcule sur le panier local du store - c'est ce que testent
+ * les tests ci-dessous. Une fois connectée, le panier qui fait foi vient du
+ * compte (`useCart`) : les appelants concernés passent alors `cartOverride`.
+ */
+export function useCartTotals(cartOverride?: CartLine[]) {
+  const storeCart = useCartStore((s) => s.cart);
   const zone = useCartStore((s) => s.zone);
+  const cart = cartOverride ?? storeCart;
 
   return useMemo(() => {
     const count = cart.reduce((n, line) => n + line.qty, 0);
