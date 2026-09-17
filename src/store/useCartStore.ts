@@ -55,7 +55,7 @@ export const useCartStore = create<CartState>()(
                   : line,
               )
             : [...state.cart, { product, variant, qty }];
-          return { cart, cartOpen: true };
+          return { cart };
         }),
 
       setQty: (variantId, qty) =>

@@ -9,7 +9,8 @@ import {
   setCartQtyRemote,
 } from "../api/cart";
 import { useAuthStore } from "../store/useAuthStore";
-import { useCartStore } from "../store/useCartStore";
+import { useCartStore, type CartLine } from "../store/useCartStore";
+import { useToastStore } from "../store/useToastStore";
 import type { Product, ProductVariant } from "../data";
 
 const KEY = ["cart"];
@@ -25,6 +26,7 @@ const KEY = ["cart"];
 export function useCart() {
   const isLogged = useAuthStore((s) => Boolean(s.accessToken));
   const queryClient = useQueryClient();
+  const toast = useToastStore((s) => s.toast);
 
   const localCart = useCartStore((s) => s.cart);
   const localAdd = useCartStore((s) => s.addToCart);
@@ -35,7 +37,27 @@ export function useCart() {
   const { data: remoteCart = [] } = useQuery({ queryKey: KEY, queryFn: getCart, enabled: isLogged });
 
   const add = useMutation({
-    mutationFn: ({ variantId, qty }: { variantId: string; qty: number }) => addToCartRemote(variantId, qty),
+    mutationFn: ({ variant, qty }: { product: Product; variant: ProductVariant; qty: number }) =>
+      addToCartRemote(variant.id, qty),
+
+    // Ajout optimiste : le panier affiché change tout de suite, sans attendre
+    // la réponse serveur. La cliente qui clique « Ajouter au panier » ne doit
+    // jamais sentir un aller-retour réseau.
+    onMutate: async ({ product, variant, qty }) => {
+      await queryClient.cancelQueries({ queryKey: KEY });
+      const previous = queryClient.getQueryData<CartLine[]>(KEY) ?? [];
+      const existing = previous.find((line) => line.variant.id === variant.id);
+      const optimistic = existing
+        ? previous.map((line) => (line.variant.id === variant.id ? { ...line, qty: line.qty + qty } : line))
+        : [...previous, { product, variant, qty }];
+      queryClient.setQueryData(KEY, optimistic);
+      return { previous };
+    },
+    // Le serveur a refusé ou n'a pas répondu : on annule l'ajout optimiste
+    // plutôt que de laisser croire à un article qui n'est pas vraiment au panier.
+    onError: (_error, _variables, context) => {
+      if (context) queryClient.setQueryData(KEY, context.previous);
+    },
     onSuccess: (lines) => queryClient.setQueryData(KEY, lines),
   });
   const changeQty = useMutation({
@@ -55,8 +77,9 @@ export function useCart() {
     cart: isLogged ? remoteCart : localCart,
 
     addToCart: (product: Product, variant: ProductVariant, qty = 1) => {
-      if (isLogged) add.mutate({ variantId: variant.id, qty });
+      if (isLogged) add.mutate({ product, variant, qty });
       else localAdd(product, variant, qty);
+      toast("Ajouté au panier");
     },
 
     setQty: (variantId: string, qty: number) => {
