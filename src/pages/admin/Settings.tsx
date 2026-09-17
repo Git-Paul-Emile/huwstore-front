@@ -146,6 +146,13 @@ export default function Settings() {
               <Field label="Instagram" value={form.instagramUrl ?? ""} onChange={(v) => set("instagramUrl", v)} placeholder="https://instagram.com/…" />
               <Field label="Facebook" value={form.facebookUrl ?? ""} onChange={(v) => set("facebookUrl", v)} placeholder="https://facebook.com/…" />
               <Field label="TikTok" value={form.tiktokUrl ?? ""} onChange={(v) => set("tiktokUrl", v)} placeholder="https://tiktok.com/@…" />
+              <Field
+                label="WhatsApp (réseaux sociaux)"
+                value={form.whatsappUrl ?? ""}
+                onChange={(v) => set("whatsappUrl", v)}
+                placeholder="https://wa.me/…"
+                hint="Lien du bouton WhatsApp du pied de page, distinct du numéro utilisé par le widget de discussion."
+              />
             </div>
 
             {error && <p className="mt-4 text-sm text-rose-500">{error}</p>}

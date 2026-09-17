@@ -1,4 +1,5 @@
 import { FaWhatsapp } from "react-icons/fa";
+import { FaFacebookF, FaInstagram, FaTiktok } from "react-icons/fa6";
 
 type P = { className?: string; strokeWidth?: number };
 const base = (p: P) => ({
@@ -161,3 +162,6 @@ export const Phone = (p: P) => (
  * (Font Awesome).
  */
 export const WhatsApp = (p: P) => <FaWhatsapp className={p.className} />;
+export const Facebook = (p: P) => <FaFacebookF className={p.className} />;
+export const Instagram = (p: P) => <FaInstagram className={p.className} />;
+export const TikTok = (p: P) => <FaTiktok className={p.className} />;

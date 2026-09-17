@@ -8,7 +8,7 @@ import { useDeliveryZones } from "../hooks/useDeliveryZones";
 import { useWishlist } from "../hooks/useWishlist";
 import { useShop } from "../hooks/useSettings";
 import { Search, User, Heart, Bag, Menu, Close } from "./icons";
-import logoDark from "../assets/logo1.svg";
+import logo from "../assets/logo1.svg";
 
 /**
  * Promesses de la boutique, affichées dans le ruban du haut SUR LA PAGE
@@ -59,8 +59,24 @@ export default function Header() {
 
   const [scrolled, setScrolled] = useState(false);
   const [mobile, setMobile] = useState(false);
+  const [search, setSearch] = useState("");
   const setHeaderHeight = useLayoutStore((s) => s.setHeaderHeight);
   const navRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * La recherche vit dans l'URL de la boutique (`?q=`), lue par `Listing` :
+   * un lien de recherche se partage, et le bouton « retour » du navigateur
+   * retrouve les résultats précédents. Sans terme saisi, on renvoie quand même
+   * vers la boutique en demandant le focus sur son champ, pour ne pas forcer
+   * un clic de plus.
+   */
+  const submitSearch = () => {
+    const term = search.trim();
+    setMobile(false);
+    navigate(term ? `/boutique?q=${encodeURIComponent(term)}` : "/boutique", {
+      state: term ? undefined : { focusSearch: true },
+    });
+  };
 
   // Mesure réelle (bandeau d'annonce compris) : elle varie selon que le
   // bandeau est affiché et selon la taille du logo au changement de largeur -
@@ -187,6 +203,34 @@ export default function Header() {
           scrolled ? "bg-cream/95 shadow-[0_1px_0_rgba(184,175,163,0.35),0_8px_24px_-18px_rgba(15,15,15,0.4)] backdrop-blur" : "bg-cream"
         }`}
       >
+        {/* Barre de recherche mobile et tablette : en dessous de xl, la loupe
+            seule de la barre d'icônes disparaît au profit de ce champ plein
+            largeur, toujours visible, sous le ruban et au-dessus du menu. */}
+        <div className="border-b border-taupe/15 px-5 py-3 xl:hidden">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              submitSearch();
+            }}
+            className="flex items-center gap-2 rounded-full border border-taupe/35 bg-cream-tint px-4 focus-within:border-gold-deep"
+          >
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Rechercher un produit"
+              aria-label="Rechercher dans la boutique"
+              className="flex-1 bg-transparent py-2.5 text-sm outline-none placeholder:text-taupe/70"
+            />
+            <button
+              type="submit"
+              aria-label="Lancer la recherche"
+              className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-gold text-ink"
+            >
+              <Search />
+            </button>
+          </form>
+        </div>
+
         <div className="mx-auto grid max-w-[1400px] grid-cols-[1fr_auto_1fr] items-center gap-4 px-5 md:px-10 py-4">
           {/* menu, à gauche (bouton hamburger en dessous de xl, où les cinq
               onglets ne tiennent plus dans un tiers de la barre) */}
@@ -213,21 +257,33 @@ export default function Header() {
             aria-label="Accueil HUWSTORE"
             className="justify-self-center"
           >
-            <img src={logoDark} alt="HUWSTORE" className="h-10 w-auto md:h-12" />
+            <img src={logo} alt="HUWSTORE" className="h-10 w-auto md:h-12" />
           </button>
 
           {/* icônes, à droite */}
           <div className="flex items-center justify-end gap-3.5 justify-self-end text-[1.2rem] text-ink">
-            {/* `state: { focusSearch: true }` : `Listing` place le curseur dans
-                son champ de recherche à l'arrivée - demande du 14/09/2026,
-                pour ne pas forcer un clic de plus une fois sur la boutique. */}
-            <button
-              onClick={() => navigate("/boutique", { state: { focusSearch: true } })}
-              aria-label="Rechercher dans la boutique"
-              className="transition-colors hover:text-gold-deep"
+            {/* Recherche desktop : reste à sa place dans la barre d'icônes,
+                mais un vrai champ remplace l'icône seule - demande du
+                17/09/2026. En dessous de xl, la barre pleine largeur sous le
+                ruban prend le relais (voir plus haut). */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                submitSearch();
+              }}
+              className="hidden items-center gap-1.5 border-b border-taupe/35 pb-0.5 transition-colors focus-within:border-gold-deep xl:flex"
             >
-              <Search />
-            </button>
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Rechercher…"
+                aria-label="Rechercher dans la boutique"
+                className="w-28 bg-transparent text-sm outline-none placeholder:text-taupe/70 2xl:w-40"
+              />
+              <button type="submit" aria-label="Lancer la recherche" className="shrink-0 transition-colors hover:text-gold-deep">
+                <Search />
+              </button>
+            </form>
             <button
               aria-label="Compte"
               onClick={() => (user ? navigate("/compte") : setAuthOpen(true))}
@@ -267,7 +323,7 @@ export default function Header() {
           <div className="absolute inset-0 bg-ink/40" onClick={() => setMobile(false)} />
           <div className="absolute left-0 top-0 h-full w-[82%] max-w-sm bg-cream p-6 animate-slide-in">
             <div className="flex items-center justify-between">
-              <img src={logoDark} alt="HUWSTORE" className="h-9 w-auto" />
+              <img src={logo} alt="HUWSTORE" className="h-9 w-auto" />
               <button onClick={() => setMobile(false)} className="text-2xl"><Close /></button>
             </div>
             <nav className="mt-8 flex flex-col">

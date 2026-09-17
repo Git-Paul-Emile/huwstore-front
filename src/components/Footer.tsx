@@ -1,6 +1,9 @@
 import { Link } from "react-router-dom";
-import logoLight from "../assets/logo2.svg";
+import logo from "../assets/logo2.svg";
+import waveLogo from "../assets/wave.png";
+import orangeMoneyLogo from "../assets/orange-money.png";
 import { useShop } from "../hooks/useSettings";
+import { Facebook, Instagram, TikTok, WhatsApp } from "./icons";
 
 /**
  * Pied de page.
@@ -39,20 +42,41 @@ export default function Footer() {
   // Les liens sociaux ne sont affiches que s'ils sont renseignes : un lien vide
   // vaut moins que pas de lien du tout.
   const socials = [
-    { label: "Instagram", href: shop.instagramUrl },
-    { label: "Facebook", href: shop.facebookUrl },
-    { label: "TikTok", href: shop.tiktokUrl },
-  ].filter((social): social is { label: string; href: string } => Boolean(social.href));
+    { label: "Facebook", href: shop.facebookUrl, Icon: Facebook },
+    { label: "Instagram", href: shop.instagramUrl, Icon: Instagram },
+    { label: "WhatsApp", href: shop.whatsappUrl, Icon: WhatsApp },
+    { label: "TikTok", href: shop.tiktokUrl, Icon: TikTok },
+  ].filter((social): social is { label: string; href: string; Icon: typeof Facebook } => Boolean(social.href));
 
   return (
     <footer className="mt-24 bg-ink text-cream">
       <div className="mx-auto max-w-[1400px] px-5 py-16 md:px-10">
         <div className="grid gap-12 lg:grid-cols-[1.3fr_repeat(3,1fr)]">
           <div>
-            <img src={logoLight} alt="HUWSTORE" className="h-20 w-auto md:h-24" />
+            <img src={logo} alt="HUWSTORE" className="h-20 w-auto md:h-24" />
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-cream/65">
               Alliez style et praticité au quotidien. Livraison partout au Sénégal. Paiement à la livraison sur Dakar, par Wave ou Orange Money en région.
             </p>
+
+            {socials.length > 0 && (
+              <div className="mt-6">
+                <p className="label-lux text-gold">Suivez-nous</p>
+                <div className="mt-4 flex gap-3">
+                  {socials.map(({ label, href, Icon }) => (
+                    <a
+                      key={label}
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={label}
+                      className="grid h-10 w-10 place-items-center rounded-full border border-gold/40 text-lg text-gold transition-colors hover:border-gold hover:bg-gold hover:text-ink"
+                    >
+                      <Icon />
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {cols.map((c) => (
@@ -67,27 +91,31 @@ export default function Footer() {
                   </li>
                 ))}
               </ul>
+
+              {c.title === "Informations" && (
+                <div className="mt-6">
+                  <p className="label-lux text-gold">Paiements</p>
+                  <div className="mt-3 flex items-center gap-3">
+                    <span
+                      aria-label="Espèces"
+                      title="Espèces"
+                      className="grid h-11 w-11 place-items-center rounded-full bg-cream text-2xl"
+                    >
+                      💵
+                    </span>
+                    <img src={orangeMoneyLogo} alt="Orange Money" className="h-11 w-11 rounded-full object-cover" />
+                    <img src={waveLogo} alt="Wave" className="h-11 w-11 rounded-full object-cover" />
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
 
-        <div className="mt-14 flex flex-col items-center gap-4 border-t border-cream/15 pt-6 text-center text-xs text-cream/50">
+        <div className="mt-14 border-t border-cream/15 pt-6 text-center text-xs text-cream/50">
           <p>
             © {new Date().getFullYear()} {shop.shopName} - Tous droits réservés.
           </p>
-          <div className="flex gap-5">
-            {socials.map((social) => (
-              <a
-                key={social.label}
-                href={social.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="transition-colors hover:text-gold"
-              >
-                {social.label}
-              </a>
-            ))}
-          </div>
         </div>
       </div>
     </footer>

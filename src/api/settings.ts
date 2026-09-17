@@ -20,6 +20,8 @@ export type Settings = {
   instagramUrl?: string;
   facebookUrl?: string;
   tiktokUrl?: string;
+  /** Lien du bouton WhatsApp affiché dans les réseaux sociaux du pied de page. */
+  whatsappUrl?: string;
   announcement?: string;
 };
 

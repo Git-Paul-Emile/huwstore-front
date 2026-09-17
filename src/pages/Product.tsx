@@ -7,7 +7,9 @@ import { useSeo } from "../hooks/useSeo";
 import { cm, dimensionLabels, fcfa, grams, type ProductVariant } from "../data";
 import { ProductCard } from "../components/Shared";
 import Breadcrumb from "../components/Breadcrumb";
-import { Heart, Bag, Truck, Shield, Plus, Minus, ChevronDown, Play } from "../components/icons";
+import { Heart, Bag, Truck, Plus, Minus, ChevronDown, Play } from "../components/icons";
+import waveLogo from "../assets/wave.png";
+import orangeMoneyLogo from "../assets/orange-money.png";
 
 function Accordion({ title, children, open: initial = false }: { title: string; children: React.ReactNode; open?: boolean }) {
   const [open, setOpen] = useState(initial);
@@ -397,13 +399,25 @@ export default function Product() {
           )}
 
           {/* Réassurance */}
-          <div className="mt-6 space-y-2.5 text-sm text-anthracite">
+          <div className="mt-6 space-y-3 text-sm text-anthracite">
             <p className="flex items-center gap-2.5">
               <Truck className="text-lg text-gold-deep" /> Livraison 24 h sur Dakar, 72 h ouvrées en région - frais calculés au panier
             </p>
-            <p className="flex items-center gap-2.5">
-              <Shield className="text-lg text-gold-deep" /> Espèces à la livraison sur Dakar, Wave ou Orange Money en région
-            </p>
+            <div>
+              <p className="flex items-center gap-2.5">Modalités de paiement</p>
+              <div className="mt-2 flex flex-wrap items-center gap-4">
+                <span className="flex items-center gap-2 text-xs text-taupe">
+                  <span className="text-2xl leading-none" aria-hidden="true">💵</span> Espèces
+                </span>
+                <span className="flex items-center gap-2 text-xs text-taupe">
+                  <img src={orangeMoneyLogo} alt="Orange Money" className="h-11 w-11 rounded-full object-cover" /> Orange
+                  Money
+                </span>
+                <span className="flex items-center gap-2 text-xs text-taupe">
+                  <img src={waveLogo} alt="Wave" className="h-11 w-11 rounded-full object-cover" /> Wave
+                </span>
+              </div>
+            </div>
           </div>
 
           {/* Accordéons alimentés par les vraies données produit */}

@@ -13,7 +13,7 @@ export function LegalPage({ title, updatedAt, children }: { title: string; updat
         <h1 className="serif mt-2 text-2xl md:text-4xl">{title}</h1>
         <p className="mt-3 text-xs text-taupe">Dernière mise à jour : {updatedAt}</p>
       </header>
-      <div className="prose-legal mt-8 flex flex-col gap-6 text-sm leading-relaxed text-anthracite">{children}</div>
+      <div className="prose-legal mt-8 flex flex-col gap-6 text-justify text-sm leading-relaxed text-anthracite">{children}</div>
     </article>
   );
 }

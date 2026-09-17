@@ -12,6 +12,8 @@ import { fcfa } from "../data";
 import { readApiError } from "../api/axiosConfig";
 import { ArrowRight, Check, Truck, Phone, Alert } from "../components/icons";
 import { useSeo } from "../hooks/useSeo";
+import waveLogo from "../assets/wave.png";
+import orangeMoneyLogo from "../assets/orange-money.png";
 
 type Form = {
   client: string;
@@ -441,6 +443,14 @@ export default function Checkout() {
               </Link>
               .
             </p>
+          </div>
+
+          <div className="mt-4 flex items-center justify-center gap-3 border border-taupe/30 bg-cream-tint py-4">
+            <span aria-label="Espèces" title="Espèces" className="grid h-11 w-11 place-items-center rounded-full bg-cream text-2xl">
+              💵
+            </span>
+            <img src={orangeMoneyLogo} alt="Orange Money" className="h-11 w-11 rounded-full object-cover" />
+            <img src={waveLogo} alt="Wave" className="h-11 w-11 rounded-full object-cover" />
           </div>
         </aside>
       </form>

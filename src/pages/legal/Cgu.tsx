@@ -102,27 +102,77 @@ export default function Cgu() {
 
       <Section title="Livraison">
         <p>
-          Nous livrons partout au Sénégal, à domicile ou en point relais. Sur Dakar, la livraison intervient en
-          moins de 24 heures, sauf le dimanche. Pour les autres régions, elle intervient sous 72 heures ouvrées à
-          partir de la confirmation du paiement ; le délai précis de votre zone est affiché au panier au moment de
-          votre commande.
+          Avec {shop.shopName}, bénéficiez d'une livraison en moins de 24 heures dans la région de Dakar et d'une
+          livraison entre 24 et 72 heures ouvrées dans les autres régions du Sénégal, à domicile ou en point relais
+          où il existe.
         </p>
         <p>
-          Les frais de livraison dépendent eux aussi de la zone ; ils sont affichés avant la validation et offerts
-          au-delà du seuil indiqué au panier. Un retard dû à une adresse incomplète, à un numéro injoignable ou à
-          une absence au rendez-vous ne peut nous être imputé.
+          Les frais de livraison dépendent de la zone ; ils sont affichés avant la validation de la commande et
+          offerts au-delà du seuil indiqué au panier. Un retard dû à une adresse incomplète, à un numéro injoignable
+          ou à une absence au rendez-vous ne peut nous être imputé.
         </p>
       </Section>
 
-      <Section title="Vérification à la remise, retours et échanges">
+      <Section title="Modalités de paiement">
         <p>
-          <strong>Vérifiez votre article devant la personne qui vous le remet</strong>, avant de payer. C'est le
-          moment prévu pour cela, et il ne se représente pas.
+          Pour les zones éloignées de Dakar et les autres régions du Sénégal, le paiement intégral de la commande
+          doit être effectué à l'avance par Orange Money ou Wave. Le paiement à la livraison n'est pas possible dans
+          ces zones.
         </p>
         <p>
-          Une fois le colis accepté et payé, les retours et les échanges ne sont pas acceptés. En revanche, un
-          article endommagé ou non conforme à ce que vous avez commandé est repris s'il est signalé immédiatement,
-          au moment de la remise : appelez-nous au {shop.phone} sans laisser repartir le livreur.
+          <strong>Zones éloignées de Dakar</strong> : Rufisque (toutes communes), Diamniadio, Sébikotane, Keur
+          Massar, Malika, Tivaouane, Tivaouane Peulh, Nianga, Boun, Ouagou Niayes, Yarakh, Sicap Mbao, Petit Mbao,
+          Grand Mbao, Zac Mbao, Bambilor, Koukoune, Keur Ndiaye Lo.
+        </p>
+        <p>
+          <strong>Autres régions du Sénégal</strong> : Thiès, Mbour, Saly, Tivaouane, Diourbel, Touba, Mbacké,
+          Saint-Louis, Richard-Toll, Podor, Kaolack, Ziguinchor, Casamance, Louga, Fatick, Matam, Tambacounda,
+          Kolda, Kédougou, Kaffrine, Sédhiou, Bambey, Oussouye, Dagana, Bakel, Koumpentoum, Nioro du Rip, Kébémer,
+          Vélingara, Foundiougne, Goudiry, Guinguinéo, Gossas, Kanel, Salimata, Saraya, Boukiling.
+        </p>
+      </Section>
+
+      <Section title="Politique de retours, remboursements et échanges">
+        <p>
+          Nous nous engageons à vous proposer des produits de qualité et un service irréprochable. Si toutefois un
+          article ne vous convient pas, vous pouvez demander un retour ou un échange, sous réserve du respect des
+          conditions ci-dessous.
+        </p>
+
+        <p><strong>📦 Retours</strong></p>
+        <p>
+          Vous disposez de 24 heures à compter de la réception de votre commande pour demander un retour. Pour être
+          éligible, le sac doit être non utilisé, non froissé, dans son emballage d'origine et en parfait état. Les
+          sacs utilisés ou froissés après livraison, ainsi que les emballages déchirés ou endommagés, ne sont pas
+          éligibles au retour.
+        </p>
+
+        <p><strong>🔁 Échanges</strong></p>
+        <p>
+          Si vous souhaitez échanger un sac, par exemple pour une taille différente ou en cas de changement de
+          préférence, la demande doit être effectuée dans les 24 heures suivant la réception. Au-delà de ce délai,
+          aucun échange ne sera accepté. Les conditions d'éligibilité sont les mêmes que pour les retours : sac non
+          utilisé, en parfait état et dans son emballage d'origine.
+        </p>
+        <p>
+          Les frais de retour liés à un échange sont à la charge du client, sauf en cas d'erreur de notre part.
+          Après réception et validation du sac retourné, l'échange sera effectué. Si le modèle souhaité est en
+          rupture de stock, un avoir pourra être proposé.
+        </p>
+
+        <p><strong>💸 Remboursements</strong></p>
+        <p>
+          Après réception et validation du sac retourné, le remboursement sera effectué sous 24 à 48 heures, selon
+          le mode de paiement utilisé. En cas de paiement à la livraison, le remboursement sera effectué par mobile
+          money.
+        </p>
+
+        <p><strong>🚚 Produit endommagé ou erreur de commande</strong></p>
+        <p>
+          Si un sac est arrivé endommagé ou ne correspond pas au modèle commandé, contactez-nous au {shop.phone}
+          dans les 2 heures suivant la réception, en joignant des photos à l'appui. Après vérification,{" "}
+          {shop.shopName} prend en charge les frais et procède à un échange ou à un remboursement intégral, selon le
+          cas.
         </p>
       </Section>
 
