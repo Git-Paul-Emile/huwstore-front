@@ -83,6 +83,7 @@ export default function Settings() {
         freeFrom: Number(data.get("freeFrom") ?? 0),
         delay: String(data.get("delay") ?? ""),
         relay: false,
+        codEligible: data.get("codEligible") === "on",
       },
       {
         onSuccess: () => {
@@ -153,6 +154,20 @@ export default function Settings() {
                 placeholder="https://wa.me/…"
                 hint="Lien du bouton WhatsApp du pied de page, distinct du numéro utilisé par le widget de discussion."
               />
+              <Field
+                label="Lien de paiement Wave"
+                value={form.wavePaymentUrl ?? ""}
+                onChange={(v) => set("wavePaymentUrl", v)}
+                placeholder="https://pay.wave.com/m/…"
+                hint="Affiché au paiement quand la cliente choisit Wave. Vide, Wave n'est pas proposé."
+              />
+              <Field
+                label="Lien de paiement Orange Money"
+                value={form.orangeMoneyUrl ?? ""}
+                onChange={(v) => set("orangeMoneyUrl", v)}
+                placeholder="https://…"
+                hint="Affiché au paiement quand la cliente choisit Orange Money. Vide, Orange Money n'est pas proposé."
+              />
             </div>
 
             {error && <p className="mt-4 text-sm text-rose-500">{error}</p>}
@@ -188,6 +203,10 @@ export default function Settings() {
               <ZoneField label="Frais (FCFA)" name="fee" type="number" min={0} defaultValue={2000} required />
               <ZoneField label="Offerte dès (FCFA)" name="freeFrom" type="number" min={0} defaultValue={75000} required />
               <ZoneField label="Délai" name="delay" defaultValue="24 h" required />
+              <label className="flex items-center gap-2 self-end pb-2 text-xs" style={{ color: "var(--adm-muted)" }}>
+                <input type="checkbox" name="codEligible" />
+                Paiement en espèces à la livraison
+              </label>
               <div className="lg:col-span-6">
                 <Btn type="submit" disabled={createZone.isPending}>
                   {createZone.isPending ? "Enregistrement…" : "Enregistrer la zone"}
@@ -242,6 +261,20 @@ export default function Settings() {
                 <div className="mt-2">
                   <span className="text-sm" style={{ color: "var(--adm-text)" }}>{fcfa(zone.fee)}</span>
                 </div>
+                <label className="mt-2 flex items-center gap-2 text-xs" style={{ color: "var(--adm-muted)" }}>
+                  <input
+                    type="checkbox"
+                    checked={zone.codEligible}
+                    onChange={(e) => {
+                      const codEligible = e.target.checked;
+                      run(updateZone, { id: zone.id, input: { codEligible } }, {
+                        success: `Espèces ${codEligible ? "activées" : "désactivées"} pour ${zone.city}`,
+                        failure: "Le réglage n'a pas pu être enregistré.",
+                      });
+                    }}
+                  />
+                  Paiement en espèces à la livraison
+                </label>
                 <button
                   onClick={() =>
                     run(removeZone, zone.id, {

@@ -82,7 +82,18 @@ export type Category = {
   preview?: ProductImage[];
 };
 
-export type Zone = { id: string; city: string; country: string; fee: number; freeFrom: number; delay: string; relay: boolean; active?: boolean };
+export type Zone = {
+  id: string;
+  city: string;
+  country: string;
+  fee: number;
+  freeFrom: number;
+  delay: string;
+  relay: boolean;
+  active?: boolean;
+  /** Espèces à la remise possible sur cette zone (Dakar et ses environs immédiats). */
+  codEligible: boolean;
+};
 
 /** Métadonnées de pagination renvoyées avec toute collection de l'API. */
 export type PageMeta = {

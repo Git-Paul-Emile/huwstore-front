@@ -1,14 +1,13 @@
-import { useEffect, useRef, useState } from "react";
-import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useParams, useSearchParams } from "react-router-dom";
 import { useCategories } from "../hooks/useCategories";
 import { useProductFacets, useProductPage } from "../hooks/useProducts";
 import { fcfa } from "../data";
 import { ProductCard } from "../components/Shared";
-import { ChevronDown, Close, Plus, Minus, Menu, Search as SearchIcon } from "../components/icons";
+import { ChevronDown, Close, Plus, Minus, Menu } from "../components/icons";
 import ListingBanner from "../components/ListingBanner";
 import Breadcrumb from "../components/Breadcrumb";
 import { useSeo } from "../hooks/useSeo";
-import { useDebouncedValue } from "../hooks/useDebouncedValue";
 
 type Sort = "best" | "price-asc" | "price-desc" | "new";
 const SORTS: Sort[] = ["new", "best", "price-asc", "price-desc"];
@@ -31,9 +30,6 @@ function FilterGroup({ title, children, open: init = true }: { title: string; ch
 export default function Listing() {
   const { category } = useParams<{ category?: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
-  const location = useLocation();
-  const navigate = useNavigate();
-  const searchInputRef = useRef<HTMLInputElement>(null);
   const { data: categories = [] } = useCategories();
   const { data: facets } = useProductFacets();
 
@@ -50,45 +46,11 @@ export default function Listing() {
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   /**
-   * Recherche. Le terme vit dans l'URL (?q=), pour trois raisons : la barre de
-   * l'accueil arrive ici avec sa question, un resultat de recherche se partage
-   * par lien, et le bouton « retour » du navigateur retrouve la liste
-   * precedente. Le champ reste local et n'interroge l'API qu'apres la frappe.
+   * Recherche. Le terme vit dans l'URL (?q=) et vient toujours d'ailleurs (la
+   * barre de recherche du menu) : cette page n'a plus son propre champ, elle
+   * ne fait que lire le paramètre pour filtrer et pour le fil d'Ariane.
    */
-  const [search, setSearch] = useState(searchParams.get("q") ?? "");
-  const debouncedSearch = useDebouncedValue(search.trim(), 350);
-
-  // L'URL suit la recherche debouncee, jamais chaque touche : sinon
-  // l'historique du navigateur se remplirait d'une entree par caractere.
-  useEffect(() => {
-    const current = searchParams.get("q") ?? "";
-    if (current === debouncedSearch) return;
-    const next = new URLSearchParams(searchParams);
-    if (debouncedSearch) next.set("q", debouncedSearch);
-    else next.delete("q");
-    setSearchParams(next, { replace: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearch]);
-
-  // Retour arriere ou lien externe : l'URL fait foi, le champ s'y aligne.
-  useEffect(() => {
-    const fromUrl = searchParams.get("q") ?? "";
-    setSearch((current) => (current.trim() === fromUrl ? current : fromUrl));
-  }, [searchParams]);
-
-  /**
-   * Curseur déjà actif dans le champ en arrivant depuis la loupe du menu -
-   * demande du 14/09/2026. `state.focusSearch` vient de `Header` ; il est
-   * effacé aussitôt lu pour qu'un rafraîchissement ou un retour arrière sur
-   * cette même page ne vole pas le focus une seconde fois.
-   */
-  useEffect(() => {
-    if (!(location.state as { focusSearch?: boolean } | null)?.focusSearch) return;
-    searchInputRef.current?.focus();
-    searchInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-    navigate(`${location.pathname}${location.search}`, { replace: true, state: null });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.state]);
+  const search = searchParams.get("q") ?? "";
 
   // Le tri suit la même logique que la recherche : il vit dans l'URL (?sort=),
   // pour qu'un lien « Meilleures ventes » partagé depuis l'accueil ouvre la
@@ -135,7 +97,7 @@ export default function Listing() {
     ...(mats.length > 0 ? { material: mats } : {}),
     ...(cols.length > 0 ? { color: cols } : {}),
     ...(maxPrice !== null ? { maxPrice } : {}),
-    ...(debouncedSearch ? { search: debouncedSearch } : {}),
+    ...(search ? { search } : {}),
     sort,
     page,
     limit: 10,
@@ -148,13 +110,13 @@ export default function Listing() {
   // avoir coché une matière afficherait une page vide sans explication.
   useEffect(() => {
     setPage(1);
-  }, [cats, mats, cols, maxPrice, sort, debouncedSearch]);
+  }, [cats, mats, cols, maxPrice, sort, search]);
 
   useSeo({
-    title: debouncedSearch ? `Recherche : ${debouncedSearch}` : category ? `Boutique - ${category}` : "Boutique",
+    title: search ? `Recherche : ${search}` : category ? `Boutique - ${category}` : "Boutique",
     // Une page de resultats de recherche n'a rien a faire dans un index :
     // elle produirait autant d'URL que de requetes possibles (rules/SEO.md).
-    noindex: Boolean(debouncedSearch),
+    noindex: Boolean(search),
     description:
       "Toutes nos pièces : sacs, tote bags et accessoires. Livraison partout au Sénégal. Paiement à la livraison sur Dakar, par Wave ou Orange Money en région.",
   });
@@ -240,41 +202,8 @@ export default function Listing() {
         <aside className="hidden lg:block">{sidebar}</aside>
 
         <div>
-          {/* Recherche */}
-          <div className="mb-4 flex items-center gap-3 border border-taupe/35 px-4 focus-within:border-gold">
-            <SearchIcon className="shrink-0 text-lg text-taupe" />
-            <input
-              ref={searchInputRef}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Rechercher un sac, une matiere, un coloris…"
-              aria-label="Rechercher dans la boutique"
-              className="flex-1 bg-transparent py-3 text-sm outline-none placeholder:text-taupe/70"
-            />
-            {search && (
-              <button
-                onClick={() => setSearch("")}
-                aria-label="Effacer la recherche"
-                className="shrink-0 text-taupe transition-colors hover:text-ink"
-              >
-                <Close />
-              </button>
-            )}
-          </div>
-
           {/* Barre de tri */}
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-taupe/25 pb-4">
-            <p className="text-xs text-taupe sm:text-sm" aria-live="polite">
-              {isLoading ? (
-                "Chargement…"
-              ) : (
-                <>
-                  <span className="text-ink">{meta?.total ?? 0}</span>{" "}
-                  {meta?.total === 1 ? "pièce" : "pièces"}
-                  {meta && meta.totalPages > 1 ? ` - page ${meta.page} sur ${meta.totalPages}` : ""}
-                </>
-              )}
-            </p>
+          <div className="flex flex-wrap items-center justify-end gap-3 border-b border-taupe/25 pb-4">
             <div className="flex items-center gap-3">
             <button
               onClick={() => setFiltersOpen(true)}

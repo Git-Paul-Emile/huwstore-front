@@ -4,14 +4,14 @@ export type OrderStatus = "En préparation" | "Expédiée" | "En cours de livrai
 export type PayStatus = "Payé" | "En attente" | "Échoué";
 
 /**
- * Seul mode enregistré côté serveur. Sur Dakar il correspond au paiement en
- * espèces à la livraison. Pour les autres régions, la cliente paie d'avance par
- * Wave ou Orange Money hors du site (preuve WhatsApp) : ce paiement n'est pas
- * suivi ici, la commande reste marquée « Paiement à la livraison » et la
- * boutique vérifie l'encaissement à la main avant d'expédier.
+ * Choisi par la cliente au paiement. « Espèces » n'est proposé qu'à Dakar
+ * (réglé à la remise du colis, vérifié par le serveur). Wave et Orange Money
+ * sont payés d'avance, hors du site, quelle que soit la zone : le site ne
+ * peut jamais vérifier lui-même qu'un virement mobile est arrivé, donc la
+ * boutique confirme l'encaissement à la main avant d'expédier (voir
+ * `admin/Orders.tsx`).
  */
-export const PAY_METHOD_COD = "Paiement à la livraison" as const;
-export type PayMethod = typeof PAY_METHOD_COD;
+export type PayMethod = "Espèces" | "Wave" | "Orange Money";
 
 export type DeliveryMode = "Domicile" | "Point relais";
 
@@ -45,6 +45,8 @@ export type Order = {
   total: number;
   pay: PayStatus;
   method: PayMethod;
+  /** Espèces à la remise possible sur la zone de cette commande, figé à l'achat. */
+  codEligible: boolean;
   status: OrderStatus;
   courier?: string;
   tracking?: string;
@@ -76,7 +78,7 @@ export type OrderInput = {
   country: string;
   deliveryMode: DeliveryMode;
   deliveryZoneId?: string;
-  method?: typeof PAY_METHOD_COD;
+  method: PayMethod;
   promoCode?: string;
   note?: string;
   items: { variantId: string; qty: number }[];

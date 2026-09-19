@@ -7,11 +7,12 @@ import { useDeliveryZones } from "../hooks/useDeliveryZones";
 import { useAddresses } from "../hooks/useAddresses";
 import { useCart } from "../hooks/useCart";
 import { useCreateOrder } from "../hooks/useOrders";
+import { useShop } from "../hooks/useSettings";
 import { validatePromo, type PromoQuote } from "../api/promos";
-import { PAY_METHOD_COD, type DeliveryMode } from "../api/orders";
+import type { DeliveryMode, PayMethod } from "../api/orders";
 import { fcfa } from "../data";
 import { readApiError } from "../api/axiosConfig";
-import { ArrowRight, Check, Truck, Phone, Alert } from "../components/icons";
+import { ArrowRight, Check, Truck, Alert } from "../components/icons";
 import { useSeo } from "../hooks/useSeo";
 import waveLogo from "../assets/wave.png";
 import orangeMoneyLogo from "../assets/orange-money.png";
@@ -52,11 +53,12 @@ export default function Checkout() {
   useSeo({ title: "Finaliser ma commande", noindex: true });
 
 
-  const { cart, clear } = useCart();
+  const { cart, clear, isLoading: cartLoading } = useCart();
   const zone = useCartStore((s) => s.zone);
   const setZone = useCartStore((s) => s.setZone);
 
   const user = useAuthStore((s) => s.user);
+  const shop = useShop();
 
   const { data: zones = [] } = useDeliveryZones();
   const { data: addresses = [] } = useAddresses();
@@ -70,6 +72,7 @@ export default function Checkout() {
   const [promoLoading, setPromoLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [method, setMethod] = useState<PayMethod | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
   // La boutique ne propose que la livraison à domicile.
@@ -80,6 +83,43 @@ export default function Checkout() {
   // supprimée restée en mémoire locale ne doit ni chiffrer les frais ni partir
   // avec la commande.
   const activeZone = zone && zones.some((z) => z.id === zone.id) ? zone : null;
+
+  /**
+   * Espèces n'est proposé qu'à Dakar (vérifié aussi côté serveur). Wave n'est
+   * proposé que si la boutique a renseigné son lien de paiement dans
+   * Paramètres - inutile d'offrir un choix qui ne mène nulle part. Orange
+   * Money reste affiché même sans lien encore configuré : la commande est
+   * tout de même valide, la boutique contacte alors la cliente par téléphone
+   * pour l'encaissement (voir `mail.service.ts`, `paymentHtml`).
+   */
+  const availableMethods = useMemo<PayMethod[]>(() => {
+    const list: PayMethod[] = [];
+    if (activeZone?.codEligible) list.push("Espèces");
+    if (shop.wavePaymentUrl) list.push("Wave");
+    list.push("Orange Money");
+    return list;
+  }, [activeZone, shop.wavePaymentUrl]);
+
+  const isDakar = Boolean(activeZone?.codEligible);
+  const mobileMoneyMethods: PayMethod[] = availableMethods.filter((m) => m !== "Espèces");
+
+  /**
+   * Sur Dakar, le paiement se règle à la livraison quel qu'il soit (espèces
+   * ou mobile money entre les mains de la livreuse) : le bloc est purement
+   * informatif, rien à choisir, la commande part en espèces par défaut.
+   * Ailleurs, le mobile money est payé d'avance : rien n'est présélectionné,
+   * la cliente doit choisir elle-même Wave ou Orange Money - `submit()`
+   * refuse la commande tant qu'aucun moyen n'est choisi. On efface seulement
+   * un choix devenu invalide, par exemple après un changement de zone.
+   */
+  useEffect(() => {
+    if (isDakar) {
+      if (method !== "Espèces") setMethod("Espèces");
+      return;
+    }
+    if (method && !mobileMoneyMethods.includes(method)) setMethod(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDakar, mobileMoneyMethods]);
 
   const subtotal = cart.reduce((sum, line) => sum + line.qty * line.product.price, 0);
   const shipping = !activeZone || subtotal >= activeZone.freeFrom ? 0 : activeZone.fee;
@@ -160,6 +200,7 @@ export default function Checkout() {
 
     if (!activeZone) return setError("Choisissez votre zone de livraison.");
     if (cart.length === 0) return setError("Votre panier est vide.");
+    if (!method) return setError("Choisissez un moyen de paiement.");
 
     const found = validateForm(form);
     setFieldErrors(found);
@@ -185,7 +226,7 @@ export default function Checkout() {
         country: activeZone.country,
         deliveryMode,
         deliveryZoneId: activeZone.id,
-        method: PAY_METHOD_COD,
+        method,
         promoCode: promo?.code ?? undefined,
         note: form.note.trim() || undefined,
         items,
@@ -195,6 +236,15 @@ export default function Checkout() {
     } catch (err) {
       setError(readApiError(err, "La commande n'a pas pu être enregistrée."));
     }
+  }
+
+  // Juste après la connexion, le panier pris avant de se connecter est en
+  // train d'être versé dans le compte (`useCartSync`) : le panier serveur
+  // paraît vide le temps de cette fusion. Sans cet état de chargement, cet
+  // écran affichait « Votre panier est vide » à sa place, cachant tout le
+  // formulaire - y compris le paiement - pendant plusieurs secondes.
+  if (cartLoading) {
+    return <p className="mx-auto max-w-2xl px-5 py-24 text-center text-sm text-taupe">Chargement de votre panier…</p>;
   }
 
   if (cart.length === 0) {
@@ -333,21 +383,6 @@ export default function Checkout() {
               onChange={(v) => update("note", v)}
             />
           </fieldset>
-
-          <fieldset className="flex flex-col gap-3">
-            <legend className="serif mb-2 text-lg">Paiement</legend>
-            <div className="flex items-start gap-3 border border-gold/60 bg-cream-tint p-4">
-              <Phone className="mt-0.5 text-lg text-gold-deep" />
-              <div>
-                <p className="text-sm font-medium text-ink">Paiement selon votre zone</p>
-                <p className="mt-1 text-sm text-taupe">
-                  Sur Dakar, vous réglez en espèces ou mobile money à la remise du colis. Dans les autres régions, la
-                  commande est confirmée par un paiement Wave ou Orange Money effectué : envoyez la preuve par WhatsApp,
-                  le colis part dès le paiement confirmé. Aucun paiement ne se fait sur ce site.
-                </p>
-              </div>
-            </div>
-          </fieldset>
         </div>
 
         {/* Récapitulatif */}
@@ -445,13 +480,70 @@ export default function Checkout() {
             </p>
           </div>
 
-          <div className="mt-4 flex items-center justify-center gap-3 border border-taupe/30 bg-cream-tint py-4">
-            <span aria-label="Espèces" title="Espèces" className="grid h-11 w-11 place-items-center rounded-full bg-cream text-2xl">
-              💵
-            </span>
-            <img src={orangeMoneyLogo} alt="Orange Money" className="h-11 w-11 rounded-full object-cover" />
-            <img src={waveLogo} alt="Wave" className="h-11 w-11 rounded-full object-cover" />
-          </div>
+          <fieldset className="mt-4 border border-taupe/30 bg-cream-tint">
+            <legend className="sr-only">Mode de paiement</legend>
+            <p className="label-lux px-6 pt-5 text-taupe">Mode de paiement</p>
+
+            {!activeZone ? (
+              <p className="px-6 pb-5 pt-2 text-sm text-taupe">
+                Choisissez votre zone de livraison pour connaître les modalités de paiement.
+              </p>
+            ) : availableMethods.length === 0 ? (
+              <p className="px-6 pb-5 pt-2 text-sm text-bordeaux">
+                Aucun moyen de paiement n'est disponible pour cette zone pour le moment. Contactez-nous au{" "}
+                {shop.phone}.
+              </p>
+            ) : isDakar ? (
+              // Sur Dakar, le paiement se règle à la livraison quel que soit
+              // le moyen choisi (espèces ou mobile money entre les mains de
+              // la livreuse) : rien à faire choisir ici, juste informer.
+              <div className="flex flex-col gap-3 px-6 pb-5 pt-2">
+                <div className="flex items-center gap-4">
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-cream text-xl">💵</span>
+                  <img src={waveLogo} alt="Wave" className="h-9 w-9 shrink-0 rounded-full object-cover" />
+                  <img
+                    src={orangeMoneyLogo}
+                    alt="Orange Money"
+                    className="h-9 w-9 shrink-0 rounded-full object-cover"
+                  />
+                </div>
+                <p className="text-sm text-taupe">
+                  Réglez à la livraison, en espèces ou par mobile money (Wave, Orange Money), directement auprès de
+                  la livreuse.
+                </p>
+              </div>
+            ) : (
+              <div className="pb-5">
+                {/* Hors zone éligible aux espèces, le mobile money est le
+                    seul moyen ouvert et il est payé d'avance, hors du site :
+                    le site ne peut jamais vérifier lui-même qu'un virement
+                    est arrivé, la boutique confirme donc l'encaissement à la
+                    main avant d'expédier. */}
+                <p className="px-6 pb-3 pt-2 text-sm font-medium text-ink">
+                  Paiement par Wave ou Orange Money pour valider la commande et la finaliser.
+                </p>
+
+                <div className="border-t border-taupe/15">
+                  {mobileMoneyMethods.map((m) => (
+                    <PaymentOption
+                      key={m}
+                      selected={method === m}
+                      onSelect={() => setMethod(m)}
+                      title={m}
+                      description={`Payez avec ${m}, en ligne, pour valider votre commande.`}
+                      icon={
+                        <img
+                          src={m === "Wave" ? waveLogo : orangeMoneyLogo}
+                          alt=""
+                          className="h-9 w-9 rounded-full object-cover"
+                        />
+                      }
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </fieldset>
         </aside>
       </form>
     </section>
@@ -504,6 +596,44 @@ function Field({
         hint && <span className="text-xs text-taupe">{hint}</span>
       )}
     </label>
+  );
+}
+
+/** Une ligne de choix du bloc paiement : puce ronde, titre, description, logo. */
+function PaymentOption({
+  selected,
+  onSelect,
+  title,
+  description,
+  icon,
+}: {
+  selected: boolean;
+  onSelect: () => void;
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-pressed={selected}
+      className="flex w-full items-center gap-3 border-b border-taupe/15 px-6 py-4 text-left transition-colors last:border-b-0 hover:bg-cream/60"
+    >
+      <span
+        aria-hidden
+        className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border-2 ${
+          selected ? "border-gold-deep" : "border-taupe/40"
+        }`}
+      >
+        {selected && <span className="h-2.5 w-2.5 rounded-full bg-gold-deep" />}
+      </span>
+      <span className="flex-1">
+        <span className="block text-sm font-medium text-ink">{title}</span>
+        <span className="mt-0.5 block text-xs text-taupe">{description}</span>
+      </span>
+      <span className="shrink-0">{icon}</span>
+    </button>
   );
 }
 

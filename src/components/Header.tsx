@@ -68,16 +68,12 @@ export default function Header() {
   /**
    * La recherche vit dans l'URL de la boutique (`?q=`), lue par `Listing` :
    * un lien de recherche se partage, et le bouton « retour » du navigateur
-   * retrouve les résultats précédents. Sans terme saisi, on renvoie quand même
-   * vers la boutique en demandant le focus sur son champ, pour ne pas forcer
-   * un clic de plus.
+   * retrouve les résultats précédents.
    */
   const submitSearch = () => {
     const term = search.trim();
     setMobile(false);
-    navigate(term ? `/boutique?q=${encodeURIComponent(term)}` : "/boutique", {
-      state: term ? undefined : { focusSearch: true },
-    });
+    navigate(term ? `/boutique?q=${encodeURIComponent(term)}` : "/boutique");
   };
 
   // Mesure réelle (bandeau d'annonce compris) : elle varie selon que le

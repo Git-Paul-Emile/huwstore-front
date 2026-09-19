@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import { useCategories } from "../hooks/useCategories";
 import CardRail from "./CardRail";
-import { ArrowRight } from "./icons";
 import type { Category } from "../data";
 
 /**
@@ -63,15 +62,6 @@ export default function UniverseSlider() {
         previousLabel="Univers précédents"
         nextLabel="Univers suivants"
       />
-
-      <div className="mt-8 flex justify-center">
-        <Link
-          to="/boutique"
-          className="label-lux inline-flex items-center gap-2 border-b border-ink/25 pb-1 text-anthracite transition-colors hover:border-gold-deep hover:text-gold-deep"
-        >
-          Toute la boutique <ArrowRight />
-        </Link>
-      </div>
     </section>
   );
 }

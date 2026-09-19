@@ -1,9 +1,8 @@
 import { Link } from "react-router-dom";
 import logo from "../assets/logo2.svg";
-import waveLogo from "../assets/wave.png";
-import orangeMoneyLogo from "../assets/orange-money.png";
 import { useShop } from "../hooks/useSettings";
 import { Facebook, Instagram, TikTok, WhatsApp } from "./icons";
+import PaymentBadges from "./PaymentBadges";
 
 /**
  * Pied de page.
@@ -95,16 +94,8 @@ export default function Footer() {
               {c.title === "Informations" && (
                 <div className="mt-6">
                   <p className="label-lux text-gold">Paiements</p>
-                  <div className="mt-3 flex items-center gap-3">
-                    <span
-                      aria-label="Espèces"
-                      title="Espèces"
-                      className="grid h-11 w-11 place-items-center rounded-full bg-cream text-2xl"
-                    >
-                      💵
-                    </span>
-                    <img src={orangeMoneyLogo} alt="Orange Money" className="h-11 w-11 rounded-full object-cover" />
-                    <img src={waveLogo} alt="Wave" className="h-11 w-11 rounded-full object-cover" />
+                  <div className="mt-3">
+                    <PaymentBadges />
                   </div>
                 </div>
               )}

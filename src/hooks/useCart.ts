@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   addToCartRemote,
   clearCartRemote,
@@ -14,6 +14,13 @@ import { useToastStore } from "../store/useToastStore";
 import type { Product, ProductVariant } from "../data";
 
 const KEY = ["cart"];
+/**
+ * Clé de la fusion à la connexion (`useCartSync`). Un `mutationKey` distinct
+ * permet à `useCart` de savoir qu'une fusion est en cours ailleurs dans
+ * l'arbre (`useIsMutating`), sans que les deux hooks aient besoin de partager
+ * une instance de mutation.
+ */
+const MERGE_KEY = ["cart-merge"];
 
 /**
  * Panier : réservé au compte une fois connectée, sur le même principe que
@@ -34,7 +41,12 @@ export function useCart() {
   const localRemove = useCartStore((s) => s.remove);
   const localClear = useCartStore((s) => s.clear);
 
-  const { data: remoteCart = [] } = useQuery({ queryKey: KEY, queryFn: getCart, enabled: isLogged });
+  const { data: remoteCart = [], isLoading: cartLoading } = useQuery({ queryKey: KEY, queryFn: getCart, enabled: isLogged });
+  // Le panier local vient d'être versé dans le compte (voir `useCartSync`) :
+  // tant que cette fusion n'est pas terminée, le panier serveur est encore
+  // vide. Sans ce signal, l'écran affiche un panier vide en un éclair, juste
+  // après la connexion - au pire endroit, puisque c'est celui de `/commande`.
+  const merging = useIsMutating({ mutationKey: MERGE_KEY }) > 0;
 
   const add = useMutation({
     mutationFn: ({ variant, qty }: { product: Product; variant: ProductVariant; qty: number }) =>
@@ -75,6 +87,11 @@ export function useCart() {
 
   return {
     cart: isLogged ? remoteCart : localCart,
+    // Vrai seulement pendant la connexion, le temps que le panier local soit
+    // versé dans le compte (ou, plus brièvement, le premier chargement du
+    // panier serveur). Jamais vrai pour une visiteuse non connectée : son
+    // panier local est toujours disponible tout de suite.
+    isLoading: isLogged && (cartLoading || merging),
 
     addToCart: (product: Product, variant: ProductVariant, qty = 1) => {
       if (isLogged) add.mutate({ product, variant, qty });
@@ -107,16 +124,23 @@ export function useCartSync() {
   const clearLocal = useCartStore((s) => s.clear);
   const queryClient = useQueryClient();
 
+  // `mutationKey` (et non un simple appel direct) : c'est ce qui rend la
+  // fusion observable depuis `useCart`, ailleurs dans l'arbre, via
+  // `useIsMutating`.
+  const merge = useMutation({
+    mutationKey: MERGE_KEY,
+    mutationFn: mergeCart,
+    onSuccess: (lines) => {
+      queryClient.setQueryData(KEY, lines);
+      clearLocal();
+    },
+    // Sans réseau, le panier local reste en place : la fusion sera retentée
+    // au prochain rendu où la cliente est connectée.
+  });
+
   useEffect(() => {
     if (!isLogged || local.length === 0) return;
-    mergeCart(local.map((line) => ({ variantId: line.variant.id, qty: line.qty })))
-      .then((lines) => {
-        queryClient.setQueryData(KEY, lines);
-        clearLocal();
-      })
-      .catch(() => {
-        // Sans réseau, le panier local reste en place : la fusion sera
-        // retentée au prochain rendu où la cliente est connectée.
-      });
-  }, [isLogged, local, clearLocal, queryClient]);
+    merge.mutate(local.map((line) => ({ variantId: line.variant.id, qty: line.qty })));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLogged, local]);
 }

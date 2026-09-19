@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Card, PageHead, Pill, Btn, Select, Modal, useAdminAction, useUI, fcfa, th, td } from "../../components/admin/ui";
+import { useSearchParams } from "react-router-dom";
+import { Card, PageHead, Pill, Btn, Input, Select, Modal, useAdminAction, useUI, fcfa, th, td } from "../../components/admin/ui";
 import { useOrderPage, useUpdateOrder } from "../../hooks/useOrders";
 import { exportOrdersCsv, downloadInvoice, type Order, type OrderStatus } from "../../api/orders";
 import { Download, Truck, Check, Spinner } from "../../components/icons";
@@ -10,6 +11,20 @@ const payTone = (p: Order["pay"]) => (p === "Payé" ? "green" : p === "En attent
 const statusTone = (s: OrderStatus) =>
   s === "Livrée" ? "green" : s === "Retournée" ? "red" : s === "En préparation" ? "amber" : "blue";
 
+/**
+ * Sur Dakar, le paiement se règle à la livraison - en espèces ou en mobile
+ * money entre les mains de la livreuse - ou d'avance via le lien si la
+ * cliente préfère : dans tous les cas, `settleOnDelivery` côté serveur solde
+ * le paiement au passage à « Livrée », rien à bloquer avant.
+ *
+ * Hors Dakar, le mobile money est le seul moyen ouvert et il est réglé
+ * d'avance, hors du site : celui-ci ne peut donc jamais savoir tout seul que
+ * le paiement est passé. Tant qu'une commande de ce type n'est pas marquée
+ * payée ici, elle reste bloquée avant l'étape suivante - c'est ce qui
+ * « valide » la commande.
+ */
+const needsPaymentConfirmation = (o: Order) => !o.codEligible && o.pay !== "Payé";
+
 export default function Orders() {
   const { toast } = useUI();
   const run = useAdminAction();
@@ -17,6 +32,11 @@ export default function Orders() {
   const [status, setStatus] = useState("all");
   const [page, setPage] = useState(1);
   const [openId, setOpenId] = useState<string | null>(null);
+  // Lu depuis l'URL : le lien de l'e-mail « nouvelle commande » pointe ici
+  // avec le numéro en query (?search=), pour amener directement l'admin à la
+  // commande à confirmer plutôt qu'à une liste vide de recherche.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [search, setSearch] = useState(() => searchParams.get("search") ?? "");
 
   /**
    * Filtrage ET pagination faits PAR LE SERVEUR (comme la boutique publique,
@@ -28,6 +48,7 @@ export default function Orders() {
   const { data: pageData, isLoading } = useOrderPage({
     ...(pay !== "all" ? { pay: pay as Order["pay"] } : {}),
     ...(status !== "all" ? { status: status as OrderStatus } : {}),
+    ...(search.trim() ? { search: search.trim() } : {}),
     page,
     limit: 25,
   });
@@ -39,7 +60,22 @@ export default function Orders() {
   // avoir filtré afficherait une page vide sans explication.
   useEffect(() => {
     setPage(1);
-  }, [pay, status]);
+  }, [pay, status, search]);
+
+  function updateSearch(value: string) {
+    setSearch(value);
+    setSearchParams(value ? { search: value } : {}, { replace: true });
+  }
+
+  // Ouvre directement le détail de la commande visée par une recherche exacte
+  // sur son numéro (le lien de l'e-mail de notification) : l'admin n'a pas à
+  // la repérer elle-même dans la liste pour confirmer le paiement.
+  useEffect(() => {
+    if (!search.trim() || openId) return;
+    const match = rows.find((o) => o.id === search.trim());
+    if (match) setOpenId(match.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, search]);
 
   const open = rows.find((o) => o.id === openId) ?? null;
 
@@ -56,6 +92,7 @@ export default function Orders() {
       const blob = await exportOrdersCsv({
         ...(pay !== "all" ? { pay: pay as Order["pay"] } : {}),
         ...(status !== "all" ? { status: status as OrderStatus } : {}),
+        ...(search.trim() ? { search: search.trim() } : {}),
       });
       downloadBlob(blob, stampedName("commandes"));
       toast("Export téléchargé");
@@ -74,6 +111,10 @@ export default function Orders() {
   }
 
   const advance = (o: Order) => {
+    if (needsPaymentConfirmation(o)) {
+      toast("Confirmez le paiement avant de faire avancer cette commande.", "error");
+      return;
+    }
     const i = flow.indexOf(o.status);
     if (i < 0 || i >= flow.length - 1) return;
     const next = flow[i + 1];
@@ -82,6 +123,12 @@ export default function Orders() {
       failure: "Le statut de la commande n'a pas pu être changé.",
     });
   };
+
+  const confirmPayment = (o: Order) =>
+    run(updateOrder, { id: o.id, input: { pay: "Payé" } }, {
+      success: `Paiement de ${o.id} confirmé`,
+      failure: "Le paiement n'a pas pu être confirmé.",
+    });
 
   return (
     <div>
@@ -92,7 +139,12 @@ export default function Orders() {
       />
 
       <Card className="mb-4 p-4">
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid gap-3 md:grid-cols-3">
+          <Input
+            placeholder="Rechercher (n°, client, téléphone, ville, suivi)"
+            value={search}
+            onChange={(e) => updateSearch(e.target.value)}
+          />
           <Select value={pay} onChange={(e) => setPay(e.target.value)}>
             <option value="all">Tous paiements</option>
             <option>Payé</option><option>En attente</option><option>Échoué</option>
@@ -190,6 +242,11 @@ export default function Orders() {
             <div className="rounded-lg border p-3" style={{ borderColor: "var(--adm-border)" }}>
               <p className="text-xs uppercase tracking-wider" style={{ color: "var(--adm-muted)" }}>Paiement</p>
               <p className="mt-1 text-sm" style={{ color: "var(--adm-text)" }}>{open.method} - <Pill tone={payTone(open.pay)}>{open.pay}</Pill></p>
+              {needsPaymentConfirmation(open) && (
+                <Btn variant="ghost" className="mt-2" onClick={() => confirmPayment(open)} disabled={updateOrder.isPending}>
+                  <Check /> Confirmer le paiement
+                </Btn>
+              )}
             </div>
           </div>
 
@@ -238,18 +295,28 @@ export default function Orders() {
                 <option>-</option><option>Livreur - Moussa</option><option>Livreur - Ibrahima</option><option>Retrait en point relais</option>
               </Select>
             </label>
-            <div className="flex items-end gap-2">
-              <Btn variant="ghost" onClick={() => printReceipt(open)}>
-                <Download /> Imprimer
-              </Btn>
-              {open.status === "Livrée" ? (
-                <Btn onClick={() => setOpenId(null)}>
-                  <Check /> Terminer
+            <div className="flex flex-col items-end gap-1">
+              <div className="flex items-end gap-2">
+                <Btn variant="ghost" onClick={() => printReceipt(open)}>
+                  <Download /> Imprimer
                 </Btn>
-              ) : (
-                <Btn onClick={() => advance(open)} disabled={open.status === "Retournée" || advancing}>
-                  {advancing ? <Spinner /> : <Truck />} Étape suivante
-                </Btn>
+                {open.status === "Livrée" ? (
+                  <Btn onClick={() => setOpenId(null)}>
+                    <Check /> Terminer
+                  </Btn>
+                ) : (
+                  <Btn
+                    onClick={() => advance(open)}
+                    disabled={open.status === "Retournée" || advancing || needsPaymentConfirmation(open)}
+                  >
+                    {advancing ? <Spinner /> : <Truck />} Étape suivante
+                  </Btn>
+                )}
+              </div>
+              {needsPaymentConfirmation(open) && open.status !== "Livrée" && (
+                <span className="text-xs" style={{ color: "var(--adm-muted)" }}>
+                  Paiement à confirmer avant de continuer.
+                </span>
               )}
             </div>
           </div>

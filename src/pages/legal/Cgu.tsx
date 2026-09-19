@@ -85,13 +85,14 @@ export default function Cgu() {
 
       <Section title="Paiement">
         <p>
-          <strong>Sur Dakar</strong>, le règlement se fait <strong>en espèces, à la livraison</strong>, entre vos
-          mains et celles de la personne qui vous remet le colis.
+          <strong>Sur Dakar</strong>, vous choisissez entre le règlement <strong>en espèces, à la livraison</strong>,
+          entre vos mains et celles de la personne qui vous remet le colis, ou un paiement <strong>Wave ou Orange
+          Money</strong>.
         </p>
         <p>
-          <strong>Dans les autres régions</strong>, la commande est confirmée par un paiement <strong>Wave ou
-          Orange Money</strong> du montant total, effectué hors de ce site sur le numéro que nous vous communiquons.
-          Vous nous envoyez la preuve par WhatsApp ; le colis est expédié une fois le paiement confirmé.
+          <strong>Dans les autres régions</strong>, seul un paiement <strong>Wave ou Orange Money</strong> est
+          proposé, du montant total, effectué d'avance et hors de ce site sur le numéro que nous vous communiquons.
+          Nous confirmons l'encaissement avant l'expédition : c'est ce qui valide votre commande.
         </p>
         <p>
           Aucun paiement ne se fait sur ce site : aucune carte ni aucun compte bancaire ne vous est demandé, et

@@ -49,6 +49,7 @@ export function makeZone(overrides: Partial<Zone> = {}): Zone {
     freeFrom: 30000,
     delay: "24 h",
     relay: false,
+    codEligible: true,
     ...overrides,
   };
 }

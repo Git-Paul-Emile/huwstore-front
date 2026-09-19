@@ -6,8 +6,9 @@ import { useOrder } from "../hooks/useOrders";
 import { useShop } from "../hooks/useSettings";
 import { useAuthStore } from "../store/useAuthStore";
 import { fcfa } from "../data";
-import { Check, Truck, Phone, Download } from "../components/icons";
+import { Check, Truck, Phone, Download, Alert } from "../components/icons";
 import { useSeo } from "../hooks/useSeo";
+import { PaymentMethodIcon } from "../components/PaymentBadges";
 
 /**
  * Confirmation de commande, qui sert aussi de reçu à l'écran.
@@ -29,6 +30,12 @@ export default function OrderConfirmation() {
 
   // Un reçu ne doit jamais finir dans un index de moteur de recherche.
   useSeo({ title: order ? `Reçu ${order.id}` : "Votre commande", noindex: true });
+
+  // Hors zone éligible aux espèces, la commande existe déjà (stock
+  // décrémenté), mais elle n'est pas encore validée pour la cliente : le
+  // paiement mobile money reste à effectuer, puis à vérifier à la main par
+  // la boutique (voir `admin/Orders.tsx`, `needsPaymentConfirmation`).
+  const pendingPayment = Boolean(order && order.method !== "Espèces" && !order.codEligible && order.pay !== "Payé");
 
   async function getInvoice() {
     if (!order) return;
@@ -76,7 +83,9 @@ export default function OrderConfirmation() {
         <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-gold/20 text-2xl text-gold-deep print:hidden">
           <Check />
         </span>
-        <h1 className="serif mt-5 text-2xl md:text-3xl">Merci, votre commande est enregistrée</h1>
+        <h1 className="serif mt-5 text-2xl md:text-3xl">
+          {pendingPayment ? "Plus qu'une étape : réglez votre commande" : "Merci, votre commande est enregistrée"}
+        </h1>
         <p className="mt-3 text-sm text-taupe">
           Commande <span className="text-anthracite">{order.id}</span> du{" "}
           {new Date(order.date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
@@ -95,16 +104,73 @@ export default function OrderConfirmation() {
           {order.tracking && <p className="mt-1 text-anthracite">Suivi : {order.tracking}</p>}
         </InfoCard>
 
-        <InfoCard icon={<Phone className="text-lg text-gold-deep" />} title="Paiement">
-          <p className="font-medium text-ink">
-            Montant : <span className="text-anthracite">{fcfa(order.total)}</span>
-          </p>
-          <p>
-            Sur Dakar, en espèces à la remise du colis. Dans les autres régions, par Wave ou Orange Money hors du
-            site, preuve par WhatsApp : le colis part une fois le paiement confirmé.
-          </p>
-          <p>Aucun paiement ne se fait sur ce site.</p>
-        </InfoCard>
+        {order.method === "Espèces" ? (
+          <InfoCard icon={<Phone className="text-lg text-gold-deep" />} title="Paiement">
+            <p className="font-medium text-ink">
+              Montant : <span className="text-anthracite">{fcfa(order.total)}</span>
+            </p>
+            <p>Réglez en espèces ou par mobile money à la remise du colis. </p>
+          </InfoCard>
+        ) : order.codEligible ? (
+          // Sur Dakar, le mobile money se règle comme les espèces : à la
+          // livraison. Les icônes Wave / Orange Money cliquables
+          // (PaymentBadges) suffisent à payer plus tôt pour qui le préfère.
+          <InfoCard icon={<Phone className="text-lg text-gold-deep" />} title="Paiement">
+            <p className="font-medium text-ink">
+              Montant : <span className="text-anthracite">{fcfa(order.total)}</span>
+            </p>
+            <p>
+              Vous pouvez payer {shop.shopName} dès maintenant par Wave ou Orange Money, ou régler directement à la
+              livraison, en espèces ou par mobile money.
+            </p>
+          </InfoCard>
+        ) : order.pay === "Payé" ? (
+          <div className="border border-emerald-600/30 bg-emerald-500/10 p-5">
+            <p className="label-lux flex items-center gap-2 text-emerald-700">
+              <Check /> Paiement confirmé
+            </p>
+            <div className="mt-3 flex flex-col gap-0.5 text-sm text-anthracite">
+              <p className="font-medium text-ink">
+                Montant : <span className="text-anthracite">{fcfa(order.total)}</span>
+              </p>
+              <p>Votre paiement {order.method} a été confirmé : votre commande est validée et part en préparation.</p>
+            </div>
+          </div>
+        ) : (
+          (() => {
+            const mobileMoneyUrl = order.method === "Wave" ? shop.wavePaymentUrl : shop.orangeMoneyUrl;
+            return (
+              <div className="border border-gold/60 bg-cream-tint p-5">
+                <p className="label-lux flex items-center gap-2 text-gold-deep">
+                  <Alert /> Paiement en attente
+                </p>
+                <div className="mt-3 flex flex-col gap-0.5 text-sm text-taupe">
+                  <p className="font-medium text-ink">
+                    Montant : <span className="text-anthracite">{fcfa(order.total)}</span>
+                  </p>
+                  <p className="font-medium text-ink">
+                    Paiement par {order.method} pour valider la commande et la finaliser.{" "}
+                    {mobileMoneyUrl ? (
+                      <a
+                        href={mobileMoneyUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-gold-deep underline underline-offset-2"
+                      >
+                        Payer ici
+                      </a>
+                    ) : (
+                      "Payer ici"
+                    )}
+                  </p>
+                  <div className="mt-2">
+                    <PaymentMethodIcon method={order.method === "Wave" ? "Wave" : "Orange Money"} size="sm" />
+                  </div>
+                </div>
+              </div>
+            );
+          })()
+        )}
       </div>
 
       <div className="mt-8 border border-taupe/30">

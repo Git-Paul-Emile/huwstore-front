@@ -22,6 +22,10 @@ export type Settings = {
   tiktokUrl?: string;
   /** Lien du bouton WhatsApp affiché dans les réseaux sociaux du pied de page. */
   whatsappUrl?: string;
+  /** Lien de paiement Wave, affiché au paiement quand ce moyen est choisi. */
+  wavePaymentUrl?: string;
+  /** Même rôle que wavePaymentUrl, pour Orange Money. */
+  orangeMoneyUrl?: string;
   announcement?: string;
 };
 

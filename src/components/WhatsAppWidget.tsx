@@ -23,12 +23,11 @@ export default function WhatsAppWidget() {
             <span className="grid h-9 w-9 place-items-center rounded-full bg-cream/15 text-lg"><WhatsApp /></span>
             <div className="leading-tight">
               <p className="text-sm font-semibold">{shop.shopName}</p>
-              <p className="text-[0.7rem] text-cream/80">En ligne - répond en quelques minutes</p>
             </div>
           </div>
           <div className="px-4 py-4">
             <p className="text-sm leading-relaxed text-anthracite">
-              Bonjour, commandez ou posez vos questions directement sur WhatsApp.
+              Bonjour, notre équipe est à votre écoute sur WhatsApp.
             </p>
             <a
               href={href}

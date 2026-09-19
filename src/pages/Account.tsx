@@ -624,7 +624,7 @@ function Support() {
       <div className="mt-3 space-y-2">
         {[
           ["Quels sont les délais de livraison ?", "Moins de 24 h sur Dakar, sauf le dimanche. En région, sous 72 h ouvrées à partir de la confirmation du paiement."],
-          ["Comment se passe le paiement ?", "Sur Dakar, en espèces à la remise du colis. En région, d'avance par Wave ou Orange Money hors du site, avec preuve par WhatsApp : c'est ce paiement qui confirme la commande. Aucun paiement ne se fait sur ce site."],
+          ["Comment se passe le paiement ?", "Sur Dakar, en espèces à la remise du colis, ou par Wave ou Orange Money. En région, uniquement d'avance par Wave ou Orange Money, hors de ce site : la boutique confirme l'encaissement, ce qui valide la commande. Aucun paiement ne se fait sur ce site."],
           [
             "Puis-je retourner un article ?",
             "Les retours et les échanges ne sont pas acceptés. Vérifiez votre article devant la personne qui vous le remet : un article endommagé ou non conforme est repris s'il est signalé immédiatement.",

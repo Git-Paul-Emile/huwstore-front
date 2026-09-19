@@ -10,7 +10,7 @@ export default function CartDrawer() {
   const navigate = useNavigate();
   const cartOpen = useCartStore((s) => s.cartOpen);
   const setCartOpen = useCartStore((s) => s.setCartOpen);
-  const { cart, setQty, remove } = useCart();
+  const { cart, setQty, remove, isLoading: cartLoading } = useCart();
   const zone = useCartStore((s) => s.zone);
   const setZone = useCartStore((s) => s.setZone);
   const user = useAuthStore((s) => s.user);
@@ -43,7 +43,14 @@ export default function CartDrawer() {
           <button onClick={() => setCartOpen(false)} className="text-2xl transition-colors hover:text-gold-deep"><Close /></button>
         </div>
 
-        {cart.length === 0 ? (
+        {cartLoading ? (
+          // Panier local en train d'être versé dans le compte
+          // (`useCartSync`) : sans cet état, la cliente voit "panier vide" le
+          // temps de la fusion, juste après s'être connectée.
+          <div className="flex flex-1 items-center justify-center px-6 text-center text-sm text-taupe">
+            Chargement de votre panier…
+          </div>
+        ) : cart.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
             <p className="serif text-2xl text-anthracite">Votre panier est vide</p>
             <p className="text-sm text-taupe">Découvrez nos pièces façonnées à la main.</p>

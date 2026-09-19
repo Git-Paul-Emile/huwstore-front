@@ -233,15 +233,20 @@ function ProductSection({
 
       {/* Le lien de sortie passe sous la rangée, centré : en haut à droite il
           entrait en concurrence avec le titre, ici il se lit comme la suite
-          naturelle du parcours une fois la sélection vue. */}
-      <div className="mt-8 flex justify-center">
-        <button
-          onClick={onSeeAll}
-          className="label-lux inline-flex items-center gap-2 border-b border-ink/25 pb-1 text-anthracite transition-colors hover:border-gold-deep hover:text-gold-deep"
-        >
-          Toute la boutique <ArrowRight />
-        </button>
-      </div>
+          naturelle du parcours une fois la sélection vue. Affiché une seule
+          fois, sur la dernière rangée : "Meilleures ventes" et "Nos univers"
+          juste au-dessus proposent déjà le même lien, pas besoin de le répéter
+          trois fois d'affilée. */}
+      {last && (
+        <div className="mt-8 flex justify-center">
+          <button
+            onClick={onSeeAll}
+            className="label-lux inline-flex items-center gap-2 border-b border-ink/25 pb-1 text-anthracite transition-colors hover:border-gold-deep hover:text-gold-deep"
+          >
+            Toute la boutique <ArrowRight />
+          </button>
+        </div>
+      )}
     </section>
   );
 }

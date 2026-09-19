@@ -8,8 +8,7 @@ import { cm, dimensionLabels, fcfa, grams, type ProductVariant } from "../data";
 import { ProductCard } from "../components/Shared";
 import Breadcrumb from "../components/Breadcrumb";
 import { Heart, Bag, Truck, Plus, Minus, ChevronDown, Play } from "../components/icons";
-import waveLogo from "../assets/wave.png";
-import orangeMoneyLogo from "../assets/orange-money.png";
+import PaymentBadges from "../components/PaymentBadges";
 
 function Accordion({ title, children, open: initial = false }: { title: string; children: React.ReactNode; open?: boolean }) {
   const [open, setOpen] = useState(initial);
@@ -405,17 +404,8 @@ export default function Product() {
             </p>
             <div>
               <p className="flex items-center gap-2.5">Modalités de paiement</p>
-              <div className="mt-2 flex flex-wrap items-center gap-4">
-                <span className="flex items-center gap-2 text-xs text-taupe">
-                  <span className="text-2xl leading-none" aria-hidden="true">💵</span> Espèces
-                </span>
-                <span className="flex items-center gap-2 text-xs text-taupe">
-                  <img src={orangeMoneyLogo} alt="Orange Money" className="h-11 w-11 rounded-full object-cover" /> Orange
-                  Money
-                </span>
-                <span className="flex items-center gap-2 text-xs text-taupe">
-                  <img src={waveLogo} alt="Wave" className="h-11 w-11 rounded-full object-cover" /> Wave
-                </span>
+              <div className="mt-2">
+                <PaymentBadges />
               </div>
             </div>
           </div>
@@ -478,10 +468,10 @@ export default function Product() {
             <Accordion title="Livraison &amp; paiement">
               Livraison à domicile ou retrait gratuit en point relais / boutique, partout au Sénégal : moins de 24 h
               sur Dakar sauf le dimanche, sous 72 h ouvrées pour les autres régions. Les frais dépendent de la zone
-              et sont offerts au-delà du seuil indiqué au panier. Sur Dakar, le règlement se fait en espèces à la
-              remise du colis. Pour les autres régions, la commande est confirmée par un paiement Wave ou Orange
-              Money effectué hors du site, preuve envoyée par WhatsApp, et le colis part une fois le paiement
-              confirmé. Les retours et les échanges ne sont pas acceptés : vérifiez l'article devant la personne qui
+              et sont offerts au-delà du seuil indiqué au panier. Sur Dakar, réglez en espèces à la remise du colis,
+              ou par Wave ou Orange Money. Dans les autres régions, le paiement se fait d'avance par Wave ou Orange
+              Money, hors de ce site : la boutique confirme l'encaissement et le colis part une fois la commande
+              validée. Les retours et les échanges ne sont pas acceptés : vérifiez l'article devant la personne qui
               vous le remet.
             </Accordion>
           </div>
