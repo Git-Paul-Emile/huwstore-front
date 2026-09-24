@@ -27,6 +27,9 @@ export type Settings = {
   /** Même rôle que wavePaymentUrl, pour Orange Money. */
   orangeMoneyUrl?: string;
   announcement?: string;
+  /** false ferme la vitrine publique, sans bloquer le back-office. */
+  siteAvailable: boolean;
+  unavailableMessage?: string;
 };
 
 export type SettingsInput = Partial<Settings>;

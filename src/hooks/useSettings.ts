@@ -30,6 +30,7 @@ const FALLBACK: Settings = {
   whatsapp: "",
   city: "",
   country: "",
+  siteAvailable: true,
 };
 
 /** Paramètres toujours définis : évite un `?.` dans chaque composant. */

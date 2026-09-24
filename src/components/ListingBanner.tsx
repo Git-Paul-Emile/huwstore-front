@@ -142,7 +142,7 @@ export default function ListingBanner({ category }: { category?: string }) {
           donc le panneau sous la photo. Toute retouche de `SLIDE_WIDTH` se
           reporte ici, les deux séries de valeurs vont par paires. Vérifié au
           pixel : 116 / 164 / 212 / 276 / 340 px. */}
-      <div className="flex h-[7.25rem] min-w-0 flex-1 flex-col justify-center rounded-l-xl bg-cream-tint px-3 py-3 text-center sm:h-[10.25rem] sm:px-6 sm:py-5 md:h-[13.25rem] md:px-10 lg:h-[17.25rem] xl:h-[21.25rem]">
+      <div className="flex h-[7.25rem] min-w-0 flex-1 flex-col justify-center rounded-l-xl bg-[#7A553D] px-3 py-3 text-center sm:h-[10.25rem] sm:px-6 sm:py-5 md:h-[13.25rem] md:px-10 lg:h-[17.25rem] xl:h-[21.25rem]">
         {volets.map((volet, position) => {
           // Le titre du premier volet est le titre de la page. Les autres sont
           // des accroches : un `<h2>` « Les mini formats » annoncerait au
@@ -152,11 +152,11 @@ export default function ListingBanner({ category }: { category?: string }) {
           return (
             <div key={volet.titre} className={position === actif ? "" : "hidden"}>
               {volet.surtitre && (
-                <p className="label-lux text-[0.6rem] text-gold-deep sm:text-[0.68rem] xl:text-xs">{volet.surtitre}</p>
+                <p className="label-lux text-[0.6rem] text-[#C9A876] sm:text-[0.68rem] xl:text-xs">{volet.surtitre}</p>
               )}
 
               <Titre
-                className={`serif text-[1.05rem] leading-tight text-ink sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl ${
+                className={`serif text-[1.05rem] leading-tight text-cream sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl ${
                   volet.surtitre ? "mt-1.5 sm:mt-3 lg:mt-4" : ""
                 }`}
               >
@@ -164,7 +164,7 @@ export default function ListingBanner({ category }: { category?: string }) {
               </Titre>
 
               {volet.soustitre && (
-                <p className="mx-auto mt-1.5 max-w-lg text-[0.68rem] leading-relaxed text-taupe sm:mt-3 sm:text-xs md:text-sm lg:mt-4 xl:text-base">
+                <p className="mx-auto mt-1.5 max-w-lg text-[0.68rem] leading-relaxed text-taupe-soft sm:mt-3 sm:text-xs md:text-sm lg:mt-4 xl:text-base">
                   {volet.soustitre}
                 </p>
               )}

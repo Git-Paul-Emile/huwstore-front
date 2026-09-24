@@ -139,7 +139,7 @@ export default function Hero() {
             le titre passerait par-dessus le visuel. */}
 
         {/* Le bouton est un enfant de la GRILLE, pas du bloc de texte.
-            Mesuré : « Découvrir la collection » sur une ligne demande 274 px,
+            Mesuré : « Explorer la boutique » sur une ligne demande 248 px,
             la colonne de gauche en fait 183 px sur un téléphone de 390 px. Le
             bouton ne peut donc pas y tenir, à aucune taille de police
             raisonnable. Sur mobile il prend une ligne à lui, sur toute la
@@ -173,7 +173,7 @@ export default function Hero() {
             to="/boutique"
             className="label-lux inline-flex items-center gap-2 whitespace-nowrap rounded-full bg-gold px-5 py-2.5 text-[0.6rem]! text-cream transition-colors hover:bg-gold-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cream sm:px-6 sm:py-3.5 sm:text-[0.68rem]! md:px-8 md:py-4"
           >
-            Découvrir la collection
+            EXPLORER LA BOUTIQUE
           </Link>
         </div>
       </div>

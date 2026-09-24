@@ -25,7 +25,7 @@ const PERSIST_MAX_AGE_MS = 24 * 60 * 60 * 1000;
  * attendu par l'UI) : un cache d'une version antérieure est alors jeté au lieu
  * d'être réhydraté.
  */
-const CACHE_BUSTER = "v2";
+const CACHE_BUSTER = "v3";
 
 /**
  * Seules les données publiques du catalogue sont persistées. Les données

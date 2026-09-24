@@ -11,6 +11,8 @@ import Product from "../pages/Product";
 import Checkout from "../pages/Checkout";
 import OrderConfirmation from "../pages/OrderConfirmation";
 import NotFoundPage from "../pages/NotFoundPage";
+import { useShop } from "../hooks/useSettings";
+import logo from "../assets/logo1.svg";
 
 /**
  * Découpage du code (rules/frontend.md).
@@ -46,15 +48,31 @@ function Loading() {
   return <p className="px-5 py-24 text-center text-sm text-taupe">Chargement…</p>;
 }
 
+function SiteUnavailable({ message }: { message?: string }) {
+  return (
+    <main className="grid min-h-screen place-items-center bg-cream px-5 py-12 text-ink">
+      <section className="w-full max-w-2xl text-center">
+        <img src={logo} alt="HUWSTORE" className="mx-auto h-16 w-auto sm:h-20" />
+        <p className="label-lux mt-8 text-gold-deep">Boutique fermée</p>
+        <h1 className="serif mt-4 text-4xl leading-tight sm:text-5xl">Nous revenons très vite</h1>
+        <p className="mx-auto mt-5 max-w-xl text-sm leading-7 text-taupe sm:text-base">
+          {message || "La boutique est fermée. Merci pour votre patience, l'expérience revient dans quelques instants."}
+        </p>
+      </section>
+    </main>
+  );
+}
+
 export function AppRoutes() {
   // Restaure la session (cookie -> nouveau jeton) avant tout rendu protégé.
   useRestoreSession();
+  const shop = useShop();
 
   return (
     <Suspense fallback={<Loading />}>
       <ScrollToTop />
       <Routes>
-        <Route element={<MainLayout />}>
+        <Route element={shop.siteAvailable ? <MainLayout /> : <SiteUnavailable message={shop.unavailableMessage} />}>
           <Route index element={<Home />} />
           <Route path="boutique" element={<Listing />} />
           <Route path="boutique/:category" element={<Listing />} />
@@ -106,7 +124,7 @@ export function AppRoutes() {
           <Route path="parametres" element={<Settings />} />
         </Route>
 
-        <Route path="*" element={<NotFoundPage />} />
+        <Route path="*" element={shop.siteAvailable ? <NotFoundPage /> : <SiteUnavailable message={shop.unavailableMessage} />} />
       </Routes>
     </Suspense>
   );

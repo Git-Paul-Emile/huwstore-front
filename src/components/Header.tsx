@@ -285,7 +285,7 @@ export default function Header() {
             <button
               aria-label="Compte"
               onClick={() => (user ? navigate("/compte") : setAuthOpen(true))}
-              className="relative hidden transition-colors hover:text-gold-deep sm:block"
+              className="relative transition-colors hover:text-gold-deep"
             >
               <User />
               {user && <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-gold" />}

@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Card, PageHead, Btn, Input, useAdminAction, useUI, fcfa } from "../../components/admin/ui";
+import { Card, PageHead, Btn, Input, Textarea, useAdminAction, useUI, fcfa } from "../../components/admin/ui";
 import {
   useCreateDeliveryZone,
   useDeleteDeliveryZone,
@@ -25,6 +25,7 @@ const EMPTY: ShopSettings = {
   whatsapp: "",
   city: "",
   country: "",
+  siteAvailable: true,
 };
 
 /** Une centaine de zones tiennent difficilement sur un seul écran - demande du 14/09/2026. */
@@ -100,6 +101,63 @@ export default function Settings() {
       <PageHead title="Paramètres" sub="Informations de la boutique et zones de livraison" />
 
       <div className="grid gap-4 lg:grid-cols-2">
+        <Card className="p-5 lg:col-span-2">
+          <form onSubmit={saveShop}>
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h3 className="serif text-lg" style={{ color: "var(--adm-text)" }}>Etat du site</h3>
+                <p className="mt-1 text-xs" style={{ color: "var(--adm-muted)" }}>
+                  Fermez la vitrine publique pendant une maintenance. L'espace admin reste accessible.
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={form.siteAvailable}
+                aria-label={form.siteAvailable ? "Fermer la vitrine" : "Ouvrir la vitrine"}
+                disabled={updateSettings.isPending}
+                onClick={() => {
+                  const siteAvailable = !form.siteAvailable;
+                  set("siteAvailable", siteAvailable);
+                  setError(null);
+                  updateSettings.mutate(
+                    { siteAvailable },
+                    {
+                      onSuccess: () => toast(siteAvailable ? "Vitrine ouverte" : "Vitrine fermée"),
+                      onError: (err) => {
+                        set("siteAvailable", !siteAvailable);
+                        setError(readApiError(err, "L'état du site n'a pas pu être enregistré."));
+                      },
+                    },
+                  );
+                }}
+                className={`relative h-10 w-20 shrink-0 rounded-full transition-colors ${
+                  form.siteAvailable ? "bg-emerald-500" : "bg-rose-500"
+                }`}
+              >
+                <span
+                  aria-hidden
+                  className={`absolute top-1 h-8 w-8 rounded-full bg-white shadow-sm transition-all ${
+                    form.siteAvailable ? "right-1" : "left-1"
+                  }`}
+                />
+              </button>
+            </div>
+
+            <label className="mt-4 block text-sm">
+              <span style={{ color: "var(--adm-muted)" }}>Message affiché quand le site est fermé</span>
+              <Textarea
+                value={form.unavailableMessage ?? ""}
+                onChange={(e) => set("unavailableMessage", e.target.value)}
+                maxLength={300}
+                rows={3}
+                className="mt-1.5"
+                placeholder="La boutique est fermée. Nous revenons très vite."
+              />
+            </label>
+          </form>
+        </Card>
+
         <Card className="p-5 lg:col-span-2">
           <form onSubmit={saveShop}>
             <h3 className="serif text-lg" style={{ color: "var(--adm-text)" }}>Informations de la boutique</h3>
